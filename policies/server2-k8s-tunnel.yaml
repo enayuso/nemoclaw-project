@@ -1,0 +1,14 @@
+preset:
+  name: server2-k8s-tunnel
+  description: "SSH-only access from ops-nemoclaw (Server 6) to Server 2 (203.0.113.10:19012) - carries a read-only local port-forward to Server 2's k3s API server (127.0.0.1:6443 on the far end), nothing else. The real gates here are the tunnel-only authorized_keys restriction (no exec/PTY, permitopen pinned to 127.0.0.1:6443 - see docs/operations.md's Setup section) and the read-only ClusterRole the resulting kubeconfig authenticates as (see k8s/rbac-readonly.yaml) - this network policy is defense-in-depth, not the only gate. Same shape as the retired server5-readonly-monitoring.yaml preset (removed 2026-07-22 alongside Server 5's decommission, see attic/) used to be."
+
+network_policies:
+  server2_k8s_tunnel:
+    name: server2_k8s_tunnel
+    endpoints:
+      - host: 203.0.113.10
+        port: 19012
+        access: full
+        tls: skip
+    binaries:
+      - { path: /usr/bin/ssh }

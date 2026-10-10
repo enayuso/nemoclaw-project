@@ -1,0 +1,482 @@
+#!/usr/bin/env bash
+# {{REPO_KEY}}-watcher: cheap-tier cron watcher for a Docker container
+# ({{CONTAINER_DEV}} on {{SSH_HOST}}, reached over SSH). Rendered from
+# templates/watcher-docker.sh.tmpl by register-repo.sh - edit the template
+# and re-render (register-repo.sh/toggle-repo.sh/resync-repo.sh), don't
+# hand-edit this file directly, it gets overwritten on the next render.
+#
+# Renamed from watcher.sh.tmpl 2026-07-21 (content otherwise unchanged) to
+# make room for templates/watcher-k8s.sh.tmpl, its sibling for
+# runtime.type=="k8s" registry entries - see registry/schema.md for the
+# runtime tagged union both templates render from.
+set -uo pipefail
+
+STATE_DIR="/sandbox/pilot-state"
+REGISTRY_FILE="$STATE_DIR/registry.json"
+REPO_KEY="{{REPO_KEY}}"
+
+STATE_FILE="$STATE_DIR/{{REPO_KEY}}-watcher.state"
+RESTARTCOUNT_FILE="$STATE_DIR/{{REPO_KEY}}-watcher.restartcount"
+DEDUP_FILE="$STATE_DIR/{{REPO_KEY}}-watcher.dedup"
+LOG_FILE="$STATE_DIR/{{REPO_KEY}}-watcher.log"
+SUPPRESSIONS_FILE="$STATE_DIR/{{REPO_KEY}}-watcher-suppressions.txt"
+STAGES_FILE="$STATE_DIR/{{REPO_KEY}}-escalation-stages.json"
+# Written ONLY by the dashboard (routes/ops.js on a Deny click), read-only
+# here - deliberately a separate file from the tracker so there is exactly
+# one writer each and no read-modify-write race between the dashboard and
+# the agent. See the stage-4 gate below and the prior-denial memo further
+# down for the two things this watcher uses it for.
+DENIALS_FILE="$STATE_DIR/{{REPO_KEY}}-escalation-denials.json"
+PAUSED_FILE="$STATE_DIR/{{REPO_KEY}}-watcher.pausedsince"
+# See the k8s sibling for why this is a separate file from PAUSED_FILE.
+MODEL_PAUSED_FILE="$STATE_DIR/{{REPO_KEY}}-watcher.modelpausedsince"
+# Incidents observed while delivery was blocked - see the queue section in
+# watcher-common.sh for the whole rationale. Nothing else reads this file.
+QUEUE_FILE="$STATE_DIR/{{REPO_KEY}}-watcher.queue"
+# Last time a stranded-tracker-entry nag was delivered, so the backstop below
+# reminds rather than nags. Its own file: a stranded entry is not an incident
+# and must not consume the incident dedup file's cooldown for a real one.
+STRANDED_NAG_FILE="$STATE_DIR/{{REPO_KEY}}-watcher.strandednag"
+# How long a tracker entry may sit below stage 4 before it counts as stranded.
+# 45 minutes is far longer than a real run of the protocol (the reviewer call,
+# the slowest step by far, takes ~7 minutes) and short enough that a human
+# notices the same working day.
+STRANDED_AFTER_SECONDS=2700
+STRANDED_NAG_COOLDOWN=21600
+
+SSH_HOST="{{SSH_HOST}}"
+CONTAINER="{{CONTAINER_DEV}}"
+COOLDOWN_SECONDS={{COOLDOWN_SECONDS}}
+
+AGENT_ID="{{ESCALATION_AGENT}}"
+SESSION_KEY="agent:{{ESCALATION_AGENT}}:{{REPO_KEY}}-watcher"
+
+# shellcheck source=lib/watcher-common.sh
+source "$STATE_DIR/lib/watcher-common.sh"
+
+mkdir -p "$STATE_DIR"
+touch "$DEDUP_FILE"
+log() { printf '[%s] %s\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')" "$*" >>"$LOG_FILE"; }
+
+# Monitoring toggle - cheap self-check every cycle, no cron add/remove
+# churn. A missing registry file or missing entry both fail SAFE as
+# monitoring-ON (loud absence of config shouldn't silently pause watching -
+# if the registry is genuinely gone, that's its own problem worth noticing
+# via a different signal, not this watcher going quietly dark).
+if [ -f "$REGISTRY_FILE" ]; then
+  # NOT `.monitoring_enabled // true` - jq's `//` treats an explicit `false`
+  # as "absent" too, not just null/missing, so that would silently coerce a
+  # real false back to true (confirmed empirically, a real bug caught while
+  # testing this exact toggle). Read the raw value, then only bash-side
+  # default a genuinely missing/null field to "true" via a string compare.
+  MONITORING_ENABLED=$(jq -r --arg k "$REPO_KEY" '.[$k].monitoring_enabled' "$REGISTRY_FILE" 2>/dev/null || echo null)
+  if [ "$MONITORING_ENABLED" = "null" ]; then
+    MONITORING_ENABLED="true"
+  fi
+  if [ "$MONITORING_ENABLED" = "false" ]; then
+    log "monitoring disabled for ${REPO_KEY} in registry, skipping this cycle"
+    exit 0
+  fi
+fi
+
+# Stage-4 gate - if any tracker entry is currently at stage 4, the
+# escalation agent already explicitly said "STOP, wait for a reply" (see
+# templates/agent-writecapable/AGENTS.md.tmpl's own Stage 4 text) and is
+# sitting in $SESSION_KEY waiting on a human's approve/deny decision from
+# the dashboard. Sending it a new automated message here - even about a
+# genuinely different incident - would land in the middle of that pause
+# and race whatever the human is about to click. Added 2026-08-05 after
+# exactly this collision risk was flagged during a live incident review.
+#
+# It gates DELIVERY ONLY, as of 2026-08-13. It used to exit the whole cycle
+# here, before the SSH pull, which meant a repo awaiting a decision was not
+# checked at all - a real 51-minute pause was 51 minutes in which this
+# container could have died unnoticed, and a weekend-long pause would be a
+# weekend of it. That is a strictly larger hole than the collision this
+# gate exists to close. Everything below still runs; the one thing that
+# does not happen while $DELIVERY_BLOCKED is set is the `openclaw agent`
+# call at the very bottom, and any incident found meanwhile goes into
+# $QUEUE_FILE and is delivered when the gate opens. See the queue section
+# in watcher-common.sh.
+#
+# The state file therefore DOES advance during a pause now, and that is
+# correct rather than the "don't optimise this away" the old comment here
+# warned about: the incident text is preserved in the queue instead of
+# being re-derived from re-reading an ever-growing `docker logs --since`
+# window. Incidents are still DEFERRED, not dropped - just deferred as
+# their own recorded objects rather than as an un-read time range.
+#
+# A DENIED fix no longer holds the gate (2026-08-05). Deny used to leave its
+# entry sitting at stage 4 forever - the agent is told to discard and does,
+# but nothing guaranteed the tracker entry was actually gone, and until it
+# was, this gate paused the repo indefinitely. Releasing on the dashboard's
+# own denial record instead of on the agent having tidied up makes the
+# unfreeze deterministic: the one thing that must happen for monitoring to
+# resume no longer depends on an agent turn succeeding.
+# Read once here, reused by the prior-denial memo further down. A missing,
+# empty or corrupt denials file degrades to "{}" (no denials) rather than
+# failing the cycle - the dashboard is the only writer, but a half-written
+# file caught mid-save shouldn't take monitoring down with it.
+DENIALS_JSON='{}'
+if [ -s "$DENIALS_FILE" ]; then
+  DENIALS_JSON=$(cat "$DENIALS_FILE" 2>/dev/null || echo '{}')
+  echo "$DENIALS_JSON" | jq -e . >/dev/null 2>&1 || DENIALS_JSON='{}'
+fi
+
+# A denial only releases the gate for the incident it was actually given
+# for. Denials are keyed by BRANCH, and branch names come from the incident
+# topic, so a later unrelated bug in the same area reuses the same
+# fix/<slug> and used to inherit the old verdict - the gate then stayed
+# open for a fix nobody had ruled on. Observed on api-rag 2026-08-12 (sig
+# 90135be7 denied, sig 76a12eb6 escalated onto the same branch 35 minutes
+# later). The signature is what distinguishes them, and it is the same
+# normalized hash used everywhere else in this script.
+#
+# Unknown signature on either side falls back to the old branch-only rule:
+# denials written before 2026-08-05 carry none, and treating unknown as
+# "different" would re-freeze monitoring on a fix that really was denied -
+# the exact indefinite pause this gate's denial-release exists to prevent.
+# Keep this predicate identical to applyDenials() in the dashboard's
+# routes/ops.js; the two answer the same question about the same files.
+GATE_HELD=0
+if [ -f "$STAGES_FILE" ] && jq -e --argjson d "$DENIALS_JSON" \
+    'to_entries | any(
+       .value.stage == 4
+       and (
+         ($d[.key]) as $den
+         | ($den | not)
+           or ( (($den.incident_signature // "") != "")
+                and (((.value.incident_signature) // "") != "")
+                and ($den.incident_signature != (.value.incident_signature)) )
+       )
+     )' \
+    "$STAGES_FILE" >/dev/null 2>&1; then
+  GATE_HELD=1
+fi
+
+# $DELIVERY_BLOCKED gates ONLY the `openclaw agent` call at the bottom of
+# this script. $DELIVERY_BLOCK_REASON is recorded on each queued incident so
+# the agent is later told why its report is arriving late, in the words of
+# the thing that actually held it.
+DELIVERY_BLOCKED=0
+DELIVERY_BLOCK_REASON=""
+
+if [ "$GATE_HELD" -eq 1 ]; then
+  DELIVERY_BLOCKED=1
+  DELIVERY_BLOCK_REASON="a fix was at stage 4 awaiting a human approve/deny"
+  # Rate-limited so a long pause doesn't bury the log in one line per cycle
+  # (a real 2h pause produced ~80 identical lines before this was added, and
+  # a weekend-long one would produce thousands): log on the transition into
+  # the pause, then at most hourly, with the elapsed time spelled out so its
+  # cost is visible rather than implied.
+  PAUSED_SINCE=$(cut -d' ' -f1 "$PAUSED_FILE" 2>/dev/null || echo "")
+  LAST_PAUSE_LOG=$(cut -d' ' -f2 "$PAUSED_FILE" 2>/dev/null || echo "")
+  PAUSE_NOW=$(date +%s)
+  if [ -z "$PAUSED_SINCE" ]; then
+    PAUSED_SINCE="$PAUSE_NOW"
+    log "escalation delivery PAUSED - a fix is at stage 4 awaiting a human approve/deny; not touching ${SESSION_KEY}. Health checking CONTINUES every cycle; anything found is queued and delivered when this clears."
+    echo "$PAUSED_SINCE $PAUSE_NOW" >"$PAUSED_FILE"
+  elif [ -z "$LAST_PAUSE_LOG" ] || [ $((PAUSE_NOW - LAST_PAUSE_LOG)) -ge 3600 ]; then
+    log "escalation delivery still paused after $(( (PAUSE_NOW - PAUSED_SINCE) / 60 ))m - ${REPO_KEY} is still being checked every cycle, $(queue_depth "$QUEUE_FILE") incident(s) queued for delivery"
+    echo "$PAUSED_SINCE $PAUSE_NOW" >"$PAUSED_FILE"
+  fi
+elif [ -f "$PAUSED_FILE" ]; then
+  RESUMED_AFTER=$(( $(date +%s) - $(cut -d' ' -f1 "$PAUSED_FILE" 2>/dev/null || date +%s) ))
+  log "escalation delivery RESUMED after $(( RESUMED_AFTER / 60 ))m paused - $(queue_depth "$QUEUE_FILE") queued incident(s) to deliver, oldest first, one per cycle"
+  rm -f "$PAUSED_FILE"
+fi
+
+# Inference-backend gate - identical contract and identical reasoning to the
+# k8s sibling (see its comment). Kept in sync with watcher-k8s.sh.tmpl.
+#
+# Like the stage-4 gate above it now blocks delivery only, for the same
+# reason: a 15-hour model outage (which has happened - Server 4, 2026-08-11)
+# is a period in which the monitored workload is no less likely to break,
+# and the model being down is not a reason to stop looking at it.
+if ! inference_backend_healthy; then
+  DELIVERY_BLOCKED=1
+  DELIVERY_BLOCK_REASON="the inference backend was not serving, so nothing could be delivered to the agent"
+  MODEL_PAUSE_NOW=$(date +%s)
+  MODEL_PAUSED_SINCE=$(cut -d' ' -f1 "$MODEL_PAUSED_FILE" 2>/dev/null || echo "")
+  MODEL_LAST_LOG=$(cut -d' ' -f2 "$MODEL_PAUSED_FILE" 2>/dev/null || echo "")
+  if [ -z "$MODEL_PAUSED_SINCE" ]; then
+    log "escalation delivery DEFERRED - the inference backend is not serving. Health checking CONTINUES every cycle; anything found is queued and delivered when the model returns."
+    echo "$MODEL_PAUSE_NOW $MODEL_PAUSE_NOW" >"$MODEL_PAUSED_FILE"
+  elif [ -z "$MODEL_LAST_LOG" ] || [ $((MODEL_PAUSE_NOW - MODEL_LAST_LOG)) -ge 3600 ]; then
+    log "inference backend still down after $(( (MODEL_PAUSE_NOW - MODEL_PAUSED_SINCE) / 60 ))m - ${REPO_KEY} is still being checked every cycle, $(queue_depth "$QUEUE_FILE") incident(s) queued for delivery"
+    echo "$MODEL_PAUSED_SINCE $MODEL_PAUSE_NOW" >"$MODEL_PAUSED_FILE"
+  fi
+elif [ -f "$MODEL_PAUSED_FILE" ]; then
+  MODEL_DOWN_FOR=$(( $(date +%s) - $(cut -d' ' -f1 "$MODEL_PAUSED_FILE" 2>/dev/null || date +%s) ))
+  log "inference backend RECOVERED after $(( MODEL_DOWN_FOR / 60 ))m - $(queue_depth "$QUEUE_FILE") queued incident(s) to deliver, oldest first, one per cycle"
+  rm -f "$MODEL_PAUSED_FILE"
+fi
+
+# Base error pattern, plus optional suppressions file (one regex per line,
+# '#'-prefixed and blank lines ignored) - lets the escalation agent propose
+# narrow additions without needing to redeploy this script.
+ERROR_PATTERN='{{ERROR_PATTERN}}'
+# Validated + fail-closed, same as the k8s watcher (see load_suppressions).
+# This runtime has no events branch, so the events bug fixed there has no
+# equivalent here - only the fail-open validation gap applied.
+EXTRA_SUPPRESS=$(load_suppressions "$SUPPRESSIONS_FILE")
+
+NOW=$(date +%s)
+LAST_CHECK=$(cat "$STATE_FILE" 2>/dev/null || echo "$((NOW - 60))")
+
+# SSH failures must NEVER be silently read as "no new logs" - see
+# ssh_pull's own doc comment in watcher-common.sh for why this uses
+# nameref output/status vars instead of `VAR=$(ssh_pull ...)`.
+ssh_pull NEW_LOGS LOGS_STATUS "$SSH_HOST" "docker logs --since '${LAST_CHECK}' '$CONTAINER' 2>&1"
+ssh_pull INSPECT INSPECT_STATUS "$SSH_HOST" "docker inspect '$CONTAINER' --format '{{.State.Status}} {{.RestartCount}}'"
+
+# A failed pull no longer exits the script. It still skips detection and
+# still leaves the state file un-advanced (so the next run retries from the
+# same point) - but the queue below may be holding incidents from earlier
+# cycles, and whether SSH to the target works has nothing to do with whether
+# the agent can be reached. Exiting here would have made an SSH outage a
+# second, silent reason for queued incidents never to arrive.
+PULL_FAILED=0
+INCIDENT=""
+if [ "$LOGS_STATUS" -ne 0 ] || [ "$INSPECT_STATUS" -ne 0 ]; then
+  log "SSH TO ${SSH_HOST} FAILED (logs exit=${LOGS_STATUS}, inspect exit=${INSPECT_STATUS}) - cannot verify container health this cycle, NOT advancing state so next run retries from the same point"
+  PULL_FAILED=1
+else
+  # Only advance state once the SSH round-trip actually succeeded.
+  echo "$NOW" >"$STATE_FILE"
+
+  NOVEL=$(echo "$NEW_LOGS" | grep -E "$ERROR_PATTERN" | apply_suppressions "$EXTRA_SUPPRESS")
+
+  CUR_STATUS=$(echo "$INSPECT" | awk '{print $1}')
+  CUR_RESTARTCOUNT=$(echo "$INSPECT" | awk '{print $2}')
+  LAST_RESTARTCOUNT=$(cat "$RESTARTCOUNT_FILE" 2>/dev/null || echo "$CUR_RESTARTCOUNT")
+  echo "$CUR_RESTARTCOUNT" >"$RESTARTCOUNT_FILE"
+
+  if [ -n "$NOVEL" ]; then
+    INCIDENT="Novel error-level lines in ${CONTAINER}:
+${NOVEL}"
+  fi
+  if [ -n "$CUR_RESTARTCOUNT" ] && [ "$CUR_RESTARTCOUNT" != "$LAST_RESTARTCOUNT" ]; then
+    INCIDENT="${INCIDENT}
+Container RestartCount changed: ${LAST_RESTARTCOUNT} -> ${CUR_RESTARTCOUNT} (status: ${CUR_STATUS})"
+  fi
+  if [ -n "$CUR_STATUS" ] && [ "$CUR_STATUS" != "running" ]; then
+    INCIDENT="${INCIDENT}
+Container status is '${CUR_STATUS}', not running"
+  fi
+fi
+
+if [ "$PULL_FAILED" -eq 1 ]; then
+  : # already logged; fall through to the queue and delivery below
+elif [ -z "$INCIDENT" ]; then
+  log "clean check, nothing novel"
+elif incident_in_cooldown "$INCIDENT" "$DEDUP_FILE" "$COOLDOWN_SECONDS" "$NOW"; then
+  log "novel incident found but in cooldown (sig ${INCIDENT_SIGNATURE}), suppressing: ${INCIDENT}"
+else
+  # Accepted for escalation. Recorded in the dedup file HERE, at acceptance,
+  # so a still-queued incident isn't re-accepted every 90s - and queued
+  # rather than sent, so acceptance no longer means "delivered or lost".
+  record_escalation "$INCIDENT_SIGNATURE" "$DEDUP_FILE" "$NOW"
+  queue_incident "$QUEUE_FILE" "$INCIDENT_SIGNATURE" "$INCIDENT" "$NOW" "$DELIVERY_BLOCK_REASON"
+  case $? in
+    0) log "ESCALATING (sig ${INCIDENT_SIGNATURE}): ${INCIDENT}" ;;
+    1) log "incident already queued for delivery (sig ${INCIDENT_SIGNATURE}), not queued twice" ;;
+    2) log "WARNING: DROPPED an incident (sig ${INCIDENT_SIGNATURE}) - the delivery queue is full at ${QUEUE_MAX_ENTRIES} entries. Delivery has been blocked long enough to overflow it; the underlying reason needs attention, not this watcher. Dropped: ${INCIDENT}" ;;
+    *) log "WARNING: could not queue incident (sig ${INCIDENT_SIGNATURE}) - the queue file could not be written. Incident text: ${INCIDENT}" ;;
+  esac
+fi
+
+# Stranded-tracker-entry backstop. An entry resting below stage 4 has no
+# button in the dashboard and no composer to type at, so whatever it is
+# waiting for can never arrive - see stranded_fixes() in watcher-common.sh
+# for the live case this was built from. Treated as a deliverable incident
+# rather than a log line so it reaches the one party that can fix it, and
+# routed through the same queue so it obeys the same collision gate.
+if [ -f "$STAGES_FILE" ]; then
+  STRANDED=$(stranded_fixes "$STAGES_FILE" "$STRANDED_AFTER_SECONDS" "$NOW")
+  LAST_NAG=$(cat "$STRANDED_NAG_FILE" 2>/dev/null || echo 0)
+  case "$LAST_NAG" in ''|*[!0-9]*) LAST_NAG=0 ;; esac
+  if [ -n "$STRANDED" ] && [ $((NOW - LAST_NAG)) -ge "$STRANDED_NAG_COOLDOWN" ]; then
+    # No elapsed time in this text: it is hashed for dedup, and a value that
+    # changes every cycle would defeat that (the same normalization lesson
+    # incident_in_cooldown records for embedded log timestamps).
+    STRANDED_INCIDENT="Your stage tracker has an entry that has come to rest below stage 4:
+
+${STRANDED}
+
+(branch, stage, last updated - one line each)
+
+Nobody can act on it there. The dashboard shows Approve/Deny only at stage 4
+and Confirm-merged only at stage 5, and the composer is disabled for this
+session, so an entry below stage 4 has no button and no way for a human to
+reply to it. If you stopped to ask a question with the entry at this stage,
+your question was never received.
+
+Re-read the entry and take exactly one of these:
+- The fix is prepared, verified and reviewed, and you are waiting for
+  permission to push: ask through /sandbox/pilot-state/lib/ask-decision.sh,
+  which is what moves the entry to stage 4 and puts it in front of a human.
+- There is nothing to land (benign, not this repo's problem, already fixed
+  upstream, no longer reproduces): say so and remove the entry, per Stage 1.
+- You stopped mid-protocol and the work is still valid: resume it.
+Do not leave it where it is."
+    if ! incident_in_cooldown "$STRANDED_INCIDENT" "$DEDUP_FILE" "$COOLDOWN_SECONDS" "$NOW"; then
+      record_escalation "$INCIDENT_SIGNATURE" "$DEDUP_FILE" "$NOW"
+      if queue_incident "$QUEUE_FILE" "$INCIDENT_SIGNATURE" "$STRANDED_INCIDENT" "$NOW" "$DELIVERY_BLOCK_REASON" stranded; then
+        echo "$NOW" >"$STRANDED_NAG_FILE"
+        log "STRANDED tracker entry (sig ${INCIDENT_SIGNATURE}) - queued a self-repair nag: $(echo "$STRANDED" | tr '\n' ';')"
+      fi
+    fi
+  fi
+fi
+
+# --- Delivery ------------------------------------------------------------
+# Everything above this line runs on every cycle regardless of the gates.
+if [ "$DELIVERY_BLOCKED" -eq 1 ]; then
+  exit "$PULL_FAILED"
+fi
+
+# One per cycle, oldest first. Each keeps its OWN signature and text, so the
+# prior-denial memo below and the tracker's incident_signature mean exactly
+# what they meant when delivery was immediate. Delivering the whole queue in
+# one message would merge distinct incidents into one hash and break both.
+if ! queue_peek INCIDENT INCIDENT_SIGNATURE QUEUED_AT HELD_REASON QUEUE_KIND "$QUEUE_FILE"; then
+  exit "$PULL_FAILED"
+fi
+
+# Modifications toggle affects only the escalation prompt's closing
+# instruction, read at prompt-construction time (not deploy time) so
+# flipping the toggle changes the very next escalation's framing without
+# needing to redeploy this script at all.
+MODIFICATIONS_ENABLED="false"
+if [ -f "$REGISTRY_FILE" ]; then
+  # Same jq `//`-on-boolean pitfall as the monitoring check above - avoid it
+  # here too even though this particular default happens to coincide with
+  # the disabled value (false), which would otherwise mask the bug.
+  MODIFICATIONS_ENABLED=$(jq -r --arg k "$REPO_KEY" '.[$k].modifications_enabled' "$REGISTRY_FILE" 2>/dev/null || echo null)
+  if [ "$MODIFICATIONS_ENABLED" = "null" ]; then
+    MODIFICATIONS_ENABLED="false"
+  fi
+fi
+if [ "$MODIFICATIONS_ENABLED" = "true" ]; then
+  CLOSING_INSTRUCTION="Investigate and report if this is benign. If it's a real bug, prepare a fix on a branch and commit it, but stop and ask permission before pushing - ask by running /sandbox/pilot-state/lib/ask-decision.sh as your TOOLS.md describes, which is the only way the question reaches a human. If benign and a stable recurring pattern, you may propose a suppression addition per your AGENTS.md. If there is nothing to fix - benign, not this repo's problem, or already resolved upstream - leave no stage-tracker entry behind: do not create one, and delete any that already exists, per Stage 1 of your AGENTS.md. Do not ask permission to remove your own tracker entry."
+else
+  CLOSING_INSTRUCTION="Investigate and report whether this is benign or a real issue. REMINDER: you are read-only - do not modify, commit, or push anything, regardless of what you find."
+fi
+
+# Prior-denial memo (2026-08-05). A denied fix gets discarded and its
+# tracker entry removed, so nothing else would remember the decision - the
+# same incident recurring after the 1h cooldown would come back as if it
+# were brand new, and the agent would cheerfully re-propose the fix that
+# was just rejected. Matching on the incident SIGNATURE (not the branch
+# name, and not the agent's own human-readable summary of the incident,
+# which is free text that varies run to run) is what makes this hold: it's
+# the same normalized hash incident_in_cooldown already computes, so "the
+# same incident" means exactly what it means everywhere else in this script.
+#
+# Deliberately a memo, not a suppression: the human denied ONE PROPOSED FIX,
+# which is not the same as saying the underlying error is uninteresting.
+# Silently muting an error class on a single Deny click would be a much
+# bigger hammer than the click implies. The agent is told what happened and
+# asked to do something different with that knowledge; if the right outcome
+# really is "stop telling me about this", that's the suppression list, and
+# it stays an explicit, separately-reviewed act.
+DENIAL_NOTE=""
+PRIOR_DENIAL=$(echo "$DENIALS_JSON" | jq -r --arg sig "$INCIDENT_SIGNATURE" \
+  'to_entries | map(select(.value.incident_signature == $sig)) | .[0] // empty
+   | "\(.key)\t\(.value.denied_at)\t\(.value.patch_path // "")"' 2>/dev/null || true)
+if [ -n "$PRIOR_DENIAL" ]; then
+  DENIED_BRANCH=$(printf '%s' "$PRIOR_DENIAL" | cut -f1)
+  DENIED_AT=$(printf '%s' "$PRIOR_DENIAL" | cut -f2)
+  DENIED_PATCH=$(printf '%s' "$PRIOR_DENIAL" | cut -f3)
+  DENIAL_NOTE="
+IMPORTANT - THIS INCIDENT HAS COME BACK AFTER A DENIED FIX.
+On ${DENIED_AT} you proposed a fix for this same incident on branch
+${DENIED_BRANCH}, and the human explicitly DENIED it. That branch and its
+worktree were discarded."
+  if [ -n "$DENIED_PATCH" ]; then
+    DENIAL_NOTE="${DENIAL_NOTE}
+The rejected diff was kept at ${DENIED_PATCH} - read it before doing
+anything else, so you know exactly what was already turned down."
+  fi
+  DENIAL_NOTE="${DENIAL_NOTE}
+Do NOT simply re-propose that same fix. Either investigate a genuinely
+different approach and explain how it differs, or make the case that this
+is benign and should go on the suppression list. Whichever you choose, say
+explicitly in your Stage 4 report that this is a repeat of a denied fix and
+what you did differently - the human needs to see that you know.
+"
+fi
+
+# Held-in-queue note. An incident delivered minutes or hours after it was
+# observed is a different thing from one delivered as it happens, and the
+# agent has no other way to know which it is holding - it would otherwise
+# investigate a stale symptom as if it were live. Only added when the delay
+# is long enough to matter; a normal cycle delivers within seconds.
+DELAY_NOTE=""
+QUEUE_AGE=$(( NOW - QUEUED_AT ))
+if [ "$QUEUE_AGE" -ge 300 ]; then
+  DELAY_NOTE="
+NOTE - THIS IS A DELAYED REPORT. This incident was observed $(( QUEUE_AGE / 60 ))
+minutes ago and held until now because ${HELD_REASON:-delivery was blocked}.
+Check whether it is still happening before treating it as live - it may have
+recovered on its own, or been fixed, in the meantime.
+"
+fi
+QUEUE_REMAINING=$(( $(queue_depth "$QUEUE_FILE") - 1 ))
+if [ "$QUEUE_REMAINING" -gt 0 ]; then
+  DELAY_NOTE="${DELAY_NOTE}
+${QUEUE_REMAINING} further incident(s) observed during that time are still
+queued behind this one and will arrive on later cycles, one at a time. Finish
+this one; do not try to pre-empt them.
+"
+fi
+
+if [ "$QUEUE_KIND" = "stranded" ]; then
+  # A stranded-entry nag is about the agent's own bookkeeping, not the
+  # container. It deliberately gets none of the incident framing: no
+  # "incident detected on <container>" header (nothing was detected on it),
+  # no prior-denial memo, and above all not the closing instruction, which
+  # would tell the agent to go prepare a fix on a branch for what is a
+  # tracker problem. It needs no session_key/signature trailer either - the
+  # entry it is about already carries both.
+  PROMPT="${INCIDENT}
+${DELAY_NOTE}"
+else
+  PROMPT="Incident detected on ${CONTAINER} (${SSH_HOST}):
+
+${INCIDENT}
+${DELAY_NOTE}${DENIAL_NOTE}
+${CLOSING_INSTRUCTION}
+
+Your session_key for this incident, to record verbatim in the Stage 2
+tracker entry (see TOOLS.md's Stage 2 jq write - there is no other way
+for you to know this value, nothing in your environment exposes it):
+${SESSION_KEY}
+
+The incident_signature for this incident, to record verbatim in that same
+Stage 2 tracker entry (same reason - it isn't derivable from anything you
+can see, and a later Deny needs it to recognise this incident if it ever
+comes back):
+${INCIDENT_SIGNATURE}"
+fi
+
+log "DELIVERING (sig ${INCIDENT_SIGNATURE}, queued $(( QUEUE_AGE / 60 ))m ago, ${QUEUE_REMAINING} behind it)"
+openclaw agent --agent "$AGENT_ID" --session-key "$SESSION_KEY" --message "$PROMPT" >>"$LOG_FILE" 2>&1
+DELIVER_RC=$?
+
+# Dropped from the queue only once it actually reached the agent. A failed
+# call leaves it queued to retry on the next cycle - which is the whole
+# reason this is a queue and not a fire-and-forget send. Retries are capped:
+# an incident that cannot be delivered at all must not be re-sent forever.
+if [ "$DELIVER_RC" -eq 0 ]; then
+  queue_drop "$QUEUE_FILE" "$INCIDENT_SIGNATURE"
+else
+  if queue_record_attempt "$QUEUE_FILE" "$INCIDENT_SIGNATURE"; then
+    log "delivery FAILED (exit ${DELIVER_RC}) for sig ${INCIDENT_SIGNATURE} - left queued, retrying next cycle"
+  else
+    log "WARNING: GIVING UP on sig ${INCIDENT_SIGNATURE} after ${QUEUE_MAX_ATTEMPTS} failed delivery attempts (last exit ${DELIVER_RC}) - dropped from the queue. This incident was never seen by the agent: ${INCIDENT}"
+  fi
+fi
+[ "$DELIVER_RC" -ne 0 ] && exit "$DELIVER_RC"
+exit "$PULL_FAILED"

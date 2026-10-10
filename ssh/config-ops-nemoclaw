@@ -1,0 +1,18 @@
+# Tunnel-only - this key can never run a command or get a PTY
+# (authorized_keys command="/bin/false",restrict,port-forwarding,
+# permitopen="127.0.0.1:6443" on Server 2's ops-s002 account - the
+# command="/bin/false" is what actually blocks exec, restrict alone does
+# not). Used exclusively by tunnel-keeper.sh to carry a local port-forward
+# to Server 2's k3s API server; kubectl itself never connects here
+# directly, it talks to 127.0.0.1:16443.
+Host server2
+    HostName 203.0.113.10
+    Port 19012
+    User ops-s002
+    IdentityFile /sandbox/.ssh/server2
+    ProxyCommand python3 /sandbox/.ssh/connect-proxy.py 203.0.113.10 19012
+    StrictHostKeyChecking accept-new
+    BatchMode yes
+    ServerAliveInterval 30
+    ServerAliveCountMax 3
+    ExitOnForwardFailure yes

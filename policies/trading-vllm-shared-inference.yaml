@@ -1,0 +1,24 @@
+preset:
+  name: trading-vllm-shared-inference
+  description: "Allows ops-nemoclaw's gateway to reach the trading project's vllm-qwen-3.6-trading container for LLM inference. This instance's original standalone inference backend was taken down 2026-07-27; the trading project's vLLM instance serves the same model family (Qwen/Qwen3.6-35B-A3B, no -FP8 suffix - see registry/schema.md-adjacent note in models.providers.inference config) and was adopted as a direct replacement, by explicit user direction. NOTE: this is a deliberate exception to the standalone-from-the-services mandate on the trading project (see project memory) - the dependency is one-directional (ops-nemoclaw depends on the trading vLLM server, not the reverse) and is purely inference-serving, not a data/code coupling, but it does mean ops-nemoclaw's own availability is now tied to that container staying up. Revisit if a dedicated service-only inference backend is ever restored. Endpoint moved 2026-08-04: migrated off Server 6 onto Server 4 (192.168.0.5). Endpoint moved AGAIN 2026-09-01: now vllm-qwen-3.6-nvfp4-trading on Server 5. Port changed same day from 11510 to 11511 (confirmed live via /v1/models) - ops-nemoclaw itself stays on Server 6. If this policy is ever out of sync with the live sandbox's config again (checked live 2026-08-05: they'd drifted - the policy and models.providers.inference.baseUrl both still pointed at the old 192.168.0.31 address for a full day after the move, causing every agent run to fail with a proxy connection-refused/timeout), re-verify both together, not just one."
+
+network_policies:
+  trading_vllm_shared_inference:
+    name: trading_vllm_shared_inference
+    endpoints:
+      - host: 192.168.0.30
+        port: 11511
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow:
+              method: GET
+              path: /**
+          - allow:
+              method: POST
+              path: /**
+    binaries:
+      - { path: /usr/local/bin/openclaw }
+      - { path: /usr/local/bin/node }
+      - { path: /usr/bin/node }
+      - { path: /usr/bin/curl }

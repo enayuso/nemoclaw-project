@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# GENERATED FILE - do not hand-edit. Regenerate with
+# scripts/generate-server5-wrapper.sh whenever registry/repos.json's set of
+# server5-hosted container_dev values changes, then redeploy to Server 5
+# yourself (human-run step, see README's "Setup" section) - this file is
+# rendered to scripts/dev-nemoclaw-server-readonly-wrapper.sh.
+#
+# Forced-command wrapper for the ops-nemoclaw-agent SSH key on the Server 5
+# dev box (203.0.113.10, user ops-s005). Installed via a `command=`
+# restriction on that key's authorized_keys line so the key can NEVER get an
+# interactive shell or run anything outside this fixed allowlist - regardless
+# of what a compromised/misdirected NemoClaw instance asks for. ops-nemoclaw
+# only needs read-only log tailing and VRAM/RAM/disk monitoring on this box;
+# all actual repo work happens inside the NemoClaw sandbox on Server 6, not
+# here.
+set -euo pipefail
+
+CONTAINERS='{{CONTAINERS}}'
+
+cmd="${SSH_ORIGINAL_COMMAND:-}"
+
+if [[ "$cmd" =~ ^docker\ logs\ --tail\ ([0-9]+)\ (${CONTAINERS})$ ]]; then
+  exec docker logs --tail "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
+elif [[ "$cmd" =~ ^docker\ logs\ (${CONTAINERS})$ ]]; then
+  exec docker logs "${BASH_REMATCH[1]}"
+elif [[ "$cmd" =~ ^docker\ logs\ --since\ \'([0-9]+)\'\ \'(${CONTAINERS})\'\ 2\>\&1$ ]]; then
+  # exact form the generic watcher.sh.tmpl uses
+  exec docker logs --since "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}" 2>&1
+elif [[ "$cmd" =~ ^docker\ inspect\ \'(${CONTAINERS})\'\ --format\ \'\{\{\.State\.Status\}\}\ \{\{\.RestartCount\}\}\'$ ]]; then
+  exec docker inspect "${BASH_REMATCH[1]}" --format '{{.State.Status}} {{.RestartCount}}'
+elif [[ "$cmd" == "docker stats --no-stream" ]]; then
+  exec docker stats --no-stream
+elif [[ "$cmd" == "nvidia-smi" ]]; then
+  exec nvidia-smi
+elif [[ "$cmd" == "free -m" ]]; then
+  exec free -m
+elif [[ "$cmd" == "df -h" ]]; then
+  exec df -h
+else
+  echo "rejected: '${cmd}' is not in the read-only monitoring allowlist" >&2
+  exit 1
+fi

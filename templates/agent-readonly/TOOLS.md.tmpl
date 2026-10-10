@@ -1,0 +1,150 @@
+# TOOLS.md - Local Notes
+
+{{ACCESS_METHOD_NOTE}}
+
+## Observability access
+
+- {{ACCESS_TARGET_LINE}}
+
+Example log pull:
+```
+{{AGENT_EXAMPLE_LOG_CMD}}
+```
+
+## Second-opinion review (always do this before reporting)
+
+Write the message to a file, then call the wrapper:
+
+```
+cat > /tmp/review-msg.txt <<'REVIEW_EOF'
+Incident context: <what you were given>
+
+My draft conclusion: <your reasoning and confidence level>
+
+If this looks like the same recurring incident you reviewed with me
+earlier in this thread (not a new/different one), assess this round fresh
+on its own merits anyway - a past round's verdict here isn't pre-approval
+for what you're seeing now.
+REVIEW_EOF
+
+/sandbox/pilot-state/lib/review-call.sh {{REVIEWER_AGENT}} <slug> /tmp/review-msg.txt
+```
+Run it with a generous `yieldMs` (900000) so `exec` waits for it. Use the
+wrapper, not a raw `openclaw agent` call: it sets the session key, the required
+`env -u` prefix and the timeout, keeps the verdict at
+`/sandbox/pilot-state/reviews/{{REVIEWER_AGENT}}--<slug>.out`, and refuses to
+start a second review of the same slug while one is already running.
+
+An oversized inline message has failed with `Validation failed for tool
+"tool_call": args must be object`, which is why the message goes via a file.
+
+`<slug>` is a short, descriptive, stable label YOU derive from the incident
+itself (e.g. `nginx-5xx-spike`, not a timestamp). Reuse the EXACT same slug on a
+later invocation if this is the same still-unresolved incident recurring, so the
+review continues one thread instead of opening a new one every time; use a
+different slug only for a genuinely different incident. Unlike the write-capable
+agents there is no persisted tracker backing this, so recognizing "is this the
+same incident" is your own judgment call each time, best-effort.
+
+**A review takes several minutes — 7 is normal.** If `exec` returns an empty or
+banner-only result, that means **still running**, NOT failed. Poll with the
+`process` tool or re-read the output file; it is finished when the last line
+reads `=== REVIEW COMPLETE (exit N) ===`. Never re-run the call while the first
+may still be live — re-invoking a busy session key aborts the running review
+instead of retrying it. The wrapper refuses this outright; an exit 75 saying a
+review is already running means waiting is the correct move.
+
+If this call genuinely fails, say so explicitly in your report rather than
+silently skipping the check and reporting as if it happened.
+
+
+## Cross-repo notification
+
+This is a **tool call, not a shell command** — it doesn't go through
+`openclaw agent`, so the `env -u` business above doesn't apply. Call
+`sessions_send` with:
+
+- `sessionKey`: `agent:<other-repo>-escalation:xref-{{REPO_KEY}}-<slug>`
+- `timeoutSeconds`: `0`
+- `message`:
+  > Heads-up from {{ESCALATION_AGENT}} ({{REPO_KEY}}): while investigating
+  > \<your incident summary\>, I found what looks like a related issue in this
+  > repo - \<the specific finding, with evidence\>. Flagging for your own
+  > investigation, not asking you to act on this without checking it yourself.
+
+`<other-repo>` must be one of your correlated repos (see AGENTS.md's cross-repo
+note, or `correlate_with` for `{{REPO_KEY}}` in
+`/sandbox/pilot-state/registry.json`). `<slug>` is the same incident identifier
+you're already using, not a fresh timestamp — that keeps one ongoing issue to one
+session.
+
+`timeoutSeconds: 0` is what makes this a heads-up rather than a request: you hand
+the finding over and move on in the same turn without blocking on the other
+agent's investigation. You get no reply and no visibility into what it decides —
+that's the intent, so don't retry or follow up waiting for one.
+
+Expect the receiving side to be asked one follow-up question by the framework
+after your message lands (an "announce step" turn) — that's OpenClaw's own
+plumbing, not something you triggered or need to respond to.
+
+This path is policy-gated: `sessions_send` only reaches agents on the configured
+allow list. A `"status": "forbidden"` result means the gate, not a mistake on
+your part — most likely the other repo was registered without the gateway being
+restarted afterward. Report it as a failed notification; don't fall back to
+`openclaw agent` to route around it.
+
+## What you can see, and what to do when you can't
+
+{{CLUSTER_ACCESS_BOUNDARY}}
+
+**A refusal is not a finding.** `Forbidden`, `denied`, `not permitted`, and a
+command that simply produces nothing all mean *you could not determine this* -
+never *this does not exist*. Do not let them collapse into the same branch of a
+shell one-liner, and never write a conclusion that treats one as the other. Say
+"I could not check X because it is outside my access" and carry on with what you
+CAN establish. Your report is read by someone deciding what to do next, and
+"absent" and "unreadable" lead to opposite decisions.
+
+This has cost a real fix: an agent ran `kubectl get configmap ...` with
+`|| echo "Not found in ConfigMap (or Forbidden)"`, got Forbidden, and everything
+downstream treated the repo's own config file as authoritative — when the running
+service read its config from the ConfigMap nobody was allowed to open.
+
+**When an incident looks config-driven, establish where the running config comes
+from before concluding anything.** You cannot read a ConfigMap or Secret, but you
+CAN read the Deployment that mounts them:
+
+```
+{{DEPLOY_SPEC_INSPECT_CMD}}
+```
+
+- **`volumes[].configMap` / `envFrom[].configMapRef` / `env[].valueFrom`** — the
+  running value comes from that object, not from any file in the repo.
+- **`volumeMounts[].mountPath`** — the exact path the workload reads.
+- **`image`** — an upstream image (not built from this repo) means the repo
+  cannot be the source of the running config at all.
+
+**A ConfigMap does NOT mean the fix is impossible — find out what generates
+it.** ConfigMap content is very often built by CI from a file in this very repo,
+in which case editing that file IS the correct fix and the only real question is
+which branch CI builds from. Seen live here: a Jenkins job runs `kubectl create
+configmap ... --from-file=<repo path> | kubectl apply -f -` then `kubectl rollout
+restart`, checked out from `{{SECONDARY_BRANCH}}` — so an earlier fix failed only
+because it was merged to `{{TRUNK_BRANCH}}` while CI builds from
+`{{SECONDARY_BRANCH}}`.
+
+So look for the deploy job (Jenkinsfile, CI workflow, deploy script) and
+establish **which branch it builds from**, and report that branch rather than
+assuming it's the one you'd expect.
+
+Say which of these you found. "The setting lives in ConfigMap `X` mounted at `Y`,
+so changing the repo file would not affect the running service" is far more
+useful than a diff suggestion.
+
+## Known benign noise
+
+None documented yet for this repo. If you notice a recurring pattern that's
+consistently benign, mention it in your report so a human can decide whether to
+extend the cheap-tier watcher's `error_pattern`/suppression handling for it (see
+`/sandbox/pilot-state/{{REPO_KEY}}-watcher.sh`) — you have no ability to edit the
+watcher script yourself, only to flag the pattern.

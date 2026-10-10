@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0b0e14" />
+  <title>ops-nemoclaw · Ops Dashboard</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <section id="login-view">
+    <div class="login-card">
+      <div class="login-brand">
+        <h1>NemoClaw Ops</h1>
+        <p class="login-subtitle">Agent Dashboard</p>
+      </div>
+      <form id="login-form">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" autocomplete="current-password" placeholder="Enter dashboard password" required />
+        <button type="submit">Log in</button>
+        <p id="login-error" class="error" hidden></p>
+      </form>
+    </div>
+  </section>
+
+  <div id="app-view" hidden>
+    <aside id="sidebar">
+      <div id="sidebar-header">
+        <span class="sidebar-title">NemoClaw Ops</span>
+        <button id="sidebar-toggle" title="Collapse sidebar" aria-label="Collapse sidebar">«</button>
+      </div>
+
+      <!-- Flat icon rows, no button chrome (2026-08-06). These are
+           navigation, not actions on the current view, and a bordered
+           "bar" per item reads as two competing buttons stacked on top of
+           each other. Icons are inline SVG rather than an icon font or
+           emoji: the strict no-external-assets rule aside, an emoji would
+           render as a different glyph per platform and can't inherit
+           currentColor for the hover/active states. -->
+      <nav id="sidebar-nav" aria-label="Main">
+        <button id="new-chat-btn" class="sidebar-nav-item" type="button">
+          <svg class="sidebar-nav-symbol sidebar-nav-icon" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M8 3.25v9.5M3.25 8h9.5" />
+          </svg>
+          <span class="sidebar-nav-label">New task</span>
+        </button>
+        <button id="ops-btn" class="sidebar-nav-item" type="button">
+          <!-- Sliders: the tab set behind it (fixes, watchers, agents,
+               approvals) is a control surface, not a list or a report. -->
+          <svg class="sidebar-nav-symbol sidebar-nav-icon" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M2.5 4.5h11M2.5 11.5h11" />
+            <circle cx="6" cy="4.5" r="1.75" />
+            <circle cx="10.5" cy="11.5" r="1.75" />
+          </svg>
+          <span class="sidebar-nav-label">Operations</span>
+          <span id="ops-approvals-badge" class="badge" hidden>0</span>
+        </button>
+        <button id="monitoring-btn" class="sidebar-nav-item" type="button">
+          <!-- Pulse trace: this is a live signal you watch, not a list you
+               read or a control you set - which is what separates it from
+               the two items above. -->
+          <svg class="sidebar-nav-symbol sidebar-nav-icon" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M1.5 8h3l2-4.5 3 9 2-4.5h3" />
+          </svg>
+          <span class="sidebar-nav-label">Monitoring</span>
+        </button>
+      </nav>
+
+      <!-- Split off from the nav above and given its own labelled block:
+           picking a repo isn't navigation, it's the required context every
+           task and every Recents entry hangs off. Kept a real <select>
+           (not restyled into a nav row) precisely because it must read as
+           something you have to choose. -->
+      <div class="sidebar-section" id="repo-section">
+        <h3 id="repo-section-heading">Repositories</h3>
+        <select id="repo-select" aria-labelledby="repo-section-heading"></select>
+        <div id="repo-meta"></div>
+      </div>
+
+      <div class="sidebar-section sidebar-grow">
+        <h3>Recents</h3>
+        <div id="recents-list">
+          <p class="sidebar-empty">No conversations yet</p>
+        </div>
+      </div>
+
+      <div id="sidebar-footer">
+        <!-- The in-progress-fixes stage widget used to live here, above the
+             Activity strip. Removed 2026-08-06: the Ops modal's Fixes tab
+             (#ops-category-fixes) shows the same rows for every registered
+             repo, not just whichever one the picker happens to be pointing
+             at, so the sidebar copy was a strictly-worse duplicate. -->
+        <div id="activity-menu">
+          <button id="activity-btn" class="sidebar-nav-item" type="button" aria-haspopup="true" aria-expanded="false" title="Recent background activity" aria-label="Recent background activity">
+            <span id="activity-icon" class="sidebar-nav-symbol" aria-hidden="true">◔</span>
+            <span id="activity-label" class="sidebar-nav-label">Activity</span>
+            <span id="activity-badge" class="badge" hidden>0</span>
+          </button>
+          <div id="activity-dropdown" hidden>
+            <h4>Recent activity</h4>
+            <div id="activity-list">
+              <p class="sidebar-empty">Nothing recent</p>
+            </div>
+          </div>
+        </div>
+
+        <div id="account-menu">
+          <button id="account-btn" class="sidebar-nav-item" type="button" aria-haspopup="true" aria-expanded="false">
+            <span id="account-avatar" class="sidebar-nav-symbol">D</span>
+            <span id="account-label" class="sidebar-nav-label">Dashboard</span>
+          </button>
+          <div id="account-dropdown" hidden>
+            <button id="open-settings-btn" type="button">Settings</button>
+            <button id="account-logout-btn" type="button">Log out</button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <main id="main-pane">
+      <header id="main-header">
+        <button id="sidebar-open-btn" hidden title="Open sidebar" aria-label="Open sidebar">≡</button>
+        <h2 id="repo-title">Pick a repo to get started</h2>
+        <span id="session-key-label"></span>
+      </header>
+
+      <!-- Model-backend outage. Above the agent-mismatch banner on purpose:
+           if the inference server is down, nothing else in this app can work,
+           so it's the first thing that should be read. role=alert so it's
+           announced when it appears rather than only on a page load. -->
+      <div id="model-health-banner" class="ops-banner ops-banner-fail" role="alert" hidden>
+        <span id="model-health-text"></span>
+        <button id="model-health-dismiss" type="button" aria-label="Dismiss">×</button>
+      </div>
+
+      <div id="agent-mismatch-banner" class="ops-banner" hidden>
+        <span id="agent-mismatch-text"></span>
+        <button id="agent-mismatch-dismiss" type="button" aria-label="Dismiss">×</button>
+      </div>
+
+      <!-- Config drift. Below the agent-mismatch banner: a missing agent is a
+           strict subset of drift and the more urgent read of the two, so when
+           both fire the specific one should be on top. -->
+      <div id="config-drift-banner" class="ops-banner" hidden>
+        <span id="config-drift-text"></span>
+        <button id="config-drift-dismiss" type="button" aria-label="Dismiss">×</button>
+      </div>
+
+      <div id="conversation">
+        <div id="conversation-inner">
+          <p id="conversation-empty">Pick a repo in the sidebar, then send a task below to watch it run live.</p>
+          <div id="status-banner"></div>
+          <div id="transcript">
+            <div id="transcript-history"></div>
+            <div id="transcript-live"></div>
+          </div>
+        </div>
+      </div>
+
+      <button id="jump-latest-btn" type="button" hidden>↓ Jump to latest</button>
+
+      <div id="session-decision-card" hidden>
+        <p id="session-decision-description"></p>
+        <div id="session-decision-actions"></div>
+        <p id="session-decision-status" hidden></p>
+      </div>
+
+      <div id="run-status" hidden>
+        <span id="run-status-dot"></span>
+        <span id="run-status-label">Working</span>
+        <span id="run-status-sep">·</span>
+        <span id="run-status-timer">0:00</span>
+        <span id="run-status-tokens" hidden></span>
+        <span id="run-status-context" hidden></span>
+      </div>
+
+      <!-- The one structured reply that CAN be sent into a watcher-started
+           escalation session, shown exactly where the disabled composer
+           otherwise dead-ends. Not driven by reading the transcript for a
+           suppression proposal (that would be keyword-guessing against free
+           text in any language) - it's offered on every escalation session
+           and the agent is told to add nothing if it never proposed one. -->
+      <div id="agent-reply-actions" hidden>
+        <p id="agent-reply-note"></p>
+        <div id="agent-reply-buttons"></div>
+        <p id="agent-reply-status" hidden></p>
+      </div>
+
+      <form id="composer">
+        <textarea
+          id="message-input"
+          rows="1"
+          placeholder="What should this agent do?"
+          required
+        ></textarea>
+        <button id="run-btn" type="submit">Run</button>
+      </form>
+      <p id="run-error" class="error" hidden></p>
+    </main>
+
+    <div id="settings-modal" hidden>
+      <div id="settings-modal-backdrop"></div>
+      <div id="settings-modal-panel" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
+        <div id="settings-modal-header">
+          <h2 id="settings-modal-title">Settings</h2>
+          <button id="settings-modal-close" type="button" aria-label="Close settings">×</button>
+        </div>
+        <div id="settings-modal-body">
+          <nav id="settings-nav">
+            <button class="settings-nav-item" type="button" data-category="data-management" aria-current="true">Data Management</button>
+          </nav>
+          <div id="settings-content">
+            <section id="settings-category-data-management" class="settings-category">
+              <h3>Data Management</h3>
+              <div class="settings-row">
+                <div class="settings-row-text">
+                  <strong>Delete All My Chats</strong>
+                  <p>Removes every conversation from this dashboard's Recents list. This only affects this dashboard's own list - it does not delete anything from the Gateway. This cannot be undone.</p>
+                </div>
+                <button id="delete-all-chats-btn" type="button" class="danger-btn">Delete All</button>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="ops-modal" hidden>
+      <div id="ops-modal-backdrop"></div>
+      <div id="ops-modal-panel" role="dialog" aria-modal="true" aria-labelledby="ops-modal-title">
+        <div id="ops-modal-header">
+          <h2 id="ops-modal-title">Operations</h2>
+          <button id="ops-modal-close" type="button" aria-label="Close operations">×</button>
+        </div>
+        <div id="ops-modal-body">
+          <nav id="ops-nav">
+            <button class="ops-nav-item" type="button" data-ops-category="fixes" aria-current="true">
+              Fixes
+              <span id="ops-fixes-tab-badge" class="badge" hidden>0</span>
+            </button>
+            <button class="ops-nav-item" type="button" data-ops-category="watchers">Watchers</button>
+            <button class="ops-nav-item" type="button" data-ops-category="agents">Agents</button>
+            <button class="ops-nav-item" type="button" data-ops-category="approvals">
+              Approvals
+              <span id="ops-approvals-tab-badge" class="badge" hidden>0</span>
+            </button>
+            <button class="ops-nav-item" type="button" data-ops-category="usage">Usage</button>
+          </nav>
+          <div id="ops-content">
+            <section id="ops-category-fixes" class="ops-category">
+              <h3>In-progress fixes</h3>
+              <p id="ops-fixes-summary" class="ops-subhead" hidden></p>
+              <div id="ops-fixes-list" class="ops-table"></div>
+            </section>
+            <section id="ops-category-watchers" class="ops-category" hidden>
+              <h3>Watchers</h3>
+              <div id="ops-watchers-list" class="ops-table"></div>
+            </section>
+            <section id="ops-category-agents" class="ops-category" hidden>
+              <h3>Agents</h3>
+              <div id="ops-agents-list" class="ops-table"></div>
+              <!-- What an agent can actually do. Deliberately below the roster:
+                   "is an agent missing" is the more urgent question, and this
+                   answers the slower one that used to need breaking something. -->
+              <div id="ops-capabilities" class="ops-capabilities"></div>
+            </section>
+            <section id="ops-category-approvals" class="ops-category" hidden>
+              <h3>Approvals</h3>
+              <div id="ops-approvals-list" class="ops-table"></div>
+            </section>
+            <!-- Token volume, not cost: this model self-reports zero cost, so a
+                 currency column would read 0.00 forever. Unlike the four tabs
+                 above this one is loaded on first click, not on modal open - the
+                 aggregation reads every agent transcript. -->
+            <section id="ops-category-usage" class="ops-category" hidden>
+              <h3>Token volume</h3>
+              <p id="ops-usage-summary" class="ops-subhead" hidden></p>
+              <div id="ops-usage-chart"></div>
+              <div id="ops-usage-agents" class="ops-table"></div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="confirm-dialog" hidden>
+      <div id="confirm-dialog-backdrop"></div>
+      <div id="confirm-dialog-panel" role="alertdialog" aria-modal="true" aria-labelledby="confirm-dialog-title">
+        <h3 id="confirm-dialog-title"></h3>
+        <p id="confirm-dialog-message"></p>
+        <div id="confirm-dialog-actions">
+          <button id="confirm-dialog-cancel" type="button">Cancel</button>
+          <button id="confirm-dialog-confirm" type="button" class="danger-btn">Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Full-page watcher run history. A third top-level view alongside
+       #login-view/#app-view rather than another modal: the Ops modal is
+       deliberately fixed-size, and a paged run list needs the room. Opened
+       from the Watchers tab's "View History" button. -->
+  <section id="watcher-history-view" hidden>
+    <header id="watcher-history-header">
+      <button id="watcher-history-back" type="button">← Back</button>
+      <h2 id="watcher-history-title"></h2>
+    </header>
+    <!-- Same split #conversation/#conversation-inner uses: the scroll
+         container spans the full page width so its scrollbar renders at
+         the page's true right edge, and an inner element owns the
+         max-width and centering. Previously the max-width sat on the
+         scroller itself, which put the scrollbar hard against the Runtime
+         column instead of the window edge.
+         Header and list stay inside the SAME scroller (header sticky), so
+         both resolve against one content width - split across the scroll
+         boundary, the rows lost the scrollbar gutter while the header did
+         not and the right-aligned Runtime label sat 15px off. The header
+         shares .ops-run's grid so its labels land over their columns,
+         which only holds because the first two tracks are fixed widths. -->
+    <div id="watcher-history-scroll">
+      <div id="watcher-history-inner">
+        <p id="watcher-history-status" class="ops-empty"></p>
+        <div id="watcher-history-head" class="ops-run" hidden>
+          <span>Time</span>
+          <span>Status</span>
+          <span>Runtime</span>
+        </div>
+        <div id="watcher-history-list"></div>
+      </div>
+    </div>
+    <!-- Outside the scroller so it stays pinned at the bottom rather than
+         scrolling away with the rows, matching how the composer sits below
+         #conversation. -->
+    <nav id="watcher-history-pager" hidden aria-label="Run history pages">
+      <button id="watcher-history-prev" type="button" aria-label="Previous page">←</button>
+      <span id="watcher-history-range"></span>
+      <button id="watcher-history-next" type="button" aria-label="Next page">→</button>
+    </nav>
+  </section>
+
+  <!-- Live K8s log streaming. A top-level view alongside #app-view and
+       #watcher-history-view for the reason that one records: the Ops modal is
+       deliberately fixed-size, and log panes need more room than a run list,
+       not less. Panes themselves are built in JS (see app.js) rather than
+       written out here - phase 5 grows this to four of them, and four
+       hand-duplicated copies of the same markup is how they drift apart. -->
+  <section id="monitoring-view" hidden>
+    <header id="monitoring-header">
+      <button id="monitoring-back" type="button">← Back</button>
+      <h2>Live logs</h2>
+      <select id="monitoring-target-select" aria-label="Workload to stream">
+        <option value="">Loading workloads…</option>
+      </select>
+      <span id="monitoring-limits"></span>
+    </header>
+    <!-- A sibling of the grid, not a child: the grid is rebuilt wholesale
+         whenever the stream changes, so a status line living inside it would
+         be destroyed by the very code that needs to write to it. -->
+    <p id="monitoring-status" class="ops-empty">Pick a workload to start streaming.</p>
+    <div id="monitoring-grid"></div>
+  </section>
+
+  <script src="/vendor/marked.umd.js"></script>
+  <script src="/vendor/purify.min.js"></script>
+  <script src="/revealQueueDiff.js"></script>
+  <script src="/itemToolEvents.js"></script>
+  <script src="/tokenUsage.js"></script>
+  <script src="/monitoringPanes.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

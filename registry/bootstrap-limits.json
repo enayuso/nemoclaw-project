@@ -1,0 +1,10 @@
+{
+  "_why": "OpenClaw silently truncates workspace bootstrap files (AGENTS.md, TOOLS.md) that exceed its per-file cap, and the truncation is far more destructive than the log line suggests - see bootstrap.sh section 8. These two numbers are the single source of truth: bootstrap.sh writes them into the gateway config, and scripts/render-template.py refuses to render a doc that would breach them. Changing one without the other is what this file exists to prevent.",
+
+  "_perFileSizing": "Largest rendered doc when this was set (2026-08-07) was escalation-AGENTS.md at 22378 chars, against OpenClaw's default cap of 20000 - every escalation agent was being truncated. 32000 clears the largest file with ~43% headroom for future template growth.",
+
+  "_totalSizing": "OpenClaw also caps the SUM of all bootstrap files for one agent (default 60000). Worst case is both AGENTS.md and TOOLS.md sitting at the per-file cap: 2 x 32000 = 64000, which would breach a 60000 total. 80000 keeps that worst case comfortably legal, so raising the per-file cap can never silently trip the total one. Actual escalation-agent total today is ~38000.",
+
+  "bootstrapMaxChars": 32000,
+  "bootstrapTotalMaxChars": 80000
+}

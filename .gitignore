@@ -1,0 +1,7 @@
+.env
+*.log
+*.state
+.DS_Store
+node_modules/
+dashboard/tls/
+dashboard/data/

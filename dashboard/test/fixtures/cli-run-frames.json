@@ -1,0 +1,632 @@
+[
+  {
+    "capture": "multi",
+    "event": "session.message",
+    "payload": {
+      "message": {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "toolCall",
+            "id": "chatcmpl-tool-8a3180c9f0bd8018",
+            "name": "tool_call",
+            "arguments": {
+              "id": "exec",
+              "args": {
+                "command": "echo FIRST_MARKER"
+              }
+            },
+            "partialArgs": "{\"id\": \"exec\", \"args\": {\"command\": \"echo FIRST_MARKER\"}}"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "capture": "multi",
+    "event": "agent",
+    "payload": {
+      "stream": "item",
+      "seq": 3,
+      "data": {
+        "itemId": "tool:chatcmpl-tool-8a3180c9f0bd8018",
+        "phase": "start",
+        "kind": "tool",
+        "title": "tool_call",
+        "status": "running",
+        "name": "tool_call",
+        "toolCallId": "chatcmpl-tool-8a3180c9f0bd8018",
+        "startedAt": 1785978558858
+      }
+    }
+  },
+  {
+    "capture": "multi",
+    "event": "agent",
+    "payload": {
+      "stream": "item",
+      "seq": 5,
+      "data": {
+        "itemId": "tool:tool_search_code:chatcmpl-tool-8a3180c9f0bd8018:exec:1",
+        "phase": "start",
+        "kind": "tool",
+        "title": "exec print text",
+        "status": "running",
+        "name": "exec",
+        "meta": "print text",
+        "toolCallId": "tool_search_code:chatcmpl-tool-8a3180c9f0bd8018:exec:1",
+        "startedAt": 1785978558868
+      }
+    }
+  },
+  {
+    "capture": "multi",
+    "event": "agent",
+    "payload": {
+      "stream": "item",
+      "seq": 6,
+      "data": {
+        "itemId": "command:tool_search_code:chatcmpl-tool-8a3180c9f0bd8018:exec:1",
+        "phase": "start",
+        "kind": "command",
+        "title": "command print text",
+        "status": "running",
+        "name": "exec",
+        "meta": "print text",
+        "toolCallId": "tool_search_code:chatcmpl-tool-8a3180c9f0bd8018:exec:1",
+        "startedAt": 1785978558868
+      }
+    }
+  },
+  {
+    "capture": "multi",
+    "event": "agent",
+    "payload": {
+      "stream": "item",
+      "seq": 8,
+      "data": {
+        "itemId": "tool:chatcmpl-tool-8a3180c9f0bd8018",
+        "phase": "update",
+        "kind": "tool",
+        "title": "tool_call",
+        "status": "running",
+        "name": "tool_call",
+        "toolCallId": "chatcmpl-tool-8a3180c9f0bd8018"
+      }
+    }
+  },
+  {
+    "capture": "multi",
+    "event": "agent",
+    "payload": {
+      "stream": "item",
+      "seq": 10,
+      "data": {
+        "itemId": "tool:tool_search_code:chatcmpl-tool-8a3180c9f0bd8018:exec:1",
+        "phase": "end",
+        "kind": "tool",
+        "title": "exec print text",
+        "status": "completed",
+        "name": "exec",
+        "meta": "print text",
+        "toolCallId": "tool_search_code:chatcmpl-tool-8a3180c9f0bd8018:exec:1",
+        "startedAt": 1785978558868,
+        "endedAt": 1785978558900
+      }
+    }
+  },
+  {
+    "capture": "multi",
+    "event": "agent",
+    "payload": {
+      "stream": "item",
+      "seq": 11,
+      "data": {
+        "itemId": "command:tool_search_code:chatcmpl-tool-8a3180c9f0bd8018:exec:1",
+        "phase": "end",
+        "kind": "command",
+        "title": "command print text",
+        "status": "completed",
+        "name": "exec",
+        "meta": "print text",
+        "toolCallId": "tool_search_code:chatcmpl-tool-8a3180c9f0bd8018:exec:1",
+        "startedAt": 1785978558868,
+        "endedAt": 1785978558900,
+        "summary": "FIRST_MARKER"
+      }
+    }
+  },
+  {
+    "capture": "multi",
+    "event": "agent",
+    "payload": {
+      "stream": "command_output",
+      "seq": 12,
+      "data": {
+        "itemId": "command:tool_search_code:chatcmpl-tool-8a3180c9f0bd8018:exec:1",
+        "phase": "end",
+        "title": "command print text",
+        "toolCallId": "tool_search_code:chatcmpl-tool-8a3180c9f0bd8018:exec:1",
+        "name": "exec",
+        "output": "FIRST_MARKER",
+        "status": "completed",
+        "exitCode": 0,
+        "durationMs": 21,
+        "cwd": "/sandbox/.openclaw/workspace"
+      }
+    }
+  },
+  {
+    "capture": "multi",
+    "event": "agent",
+    "payload": {
+      "stream": "item",
+      "seq": 14,
+      "data": {
+        "itemId": "tool:chatcmpl-tool-8a3180c9f0bd8018",
+        "phase": "end",
+        "kind": "tool",
+        "title": "tool_call",
+        "status": "completed",
+        "name": "tool_call",
+        "toolCallId": "chatcmpl-tool-8a3180c9f0bd8018",
+        "startedAt": 1785978558858,
+        "endedAt": 1785978558936
+      }
+    }
+  },
+  {
+    "capture": "multi",
+    "event": "session.message",
+    "payload": {
+      "message": {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "toolCall",
+            "id": "chatcmpl-tool-958115e861448517",
+            "name": "tool_call",
+            "arguments": {
+              "id": "read",
+              "args": {
+                "path": "/etc/hostname"
+              }
+            },
+            "partialArgs": "{\"id\": \"read\", \"args\": {\"path\": \"/etc/hostname\"}}"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "capture": "multi",
+    "event": "agent",
+    "payload": {
+      "stream": "item",
+      "seq": 16,
+      "data": {
+        "itemId": "tool:chatcmpl-tool-958115e861448517",
+        "phase": "start",
+        "kind": "tool",
+        "title": "tool_call",
+        "status": "running",
+        "name": "tool_call",
+        "toolCallId": "chatcmpl-tool-958115e861448517",
+        "startedAt": 1785978559984
+      }
+    }
+  },
+  {
+    "capture": "multi",
+    "event": "agent",
+    "payload": {
+      "stream": "item",
+      "seq": 18,
+      "data": {
+        "itemId": "tool:tool_search_code:chatcmpl-tool-958115e861448517:read:2",
+        "phase": "start",
+        "kind": "tool",
+        "title": "read from /etc/hostname",
+        "status": "running",
+        "name": "read",
+        "meta": "from /etc/hostname",
+        "toolCallId": "tool_search_code:chatcmpl-tool-958115e861448517:read:2",
+        "startedAt": 1785978559990
+      }
+    }
+  },
+  {
+    "capture": "multi",
+    "event": "agent",
+    "payload": {
+      "stream": "item",
+      "seq": 20,
+      "data": {
+        "itemId": "tool:tool_search_code:chatcmpl-tool-958115e861448517:read:2",
+        "phase": "end",
+        "kind": "tool",
+        "title": "read from /etc/hostname",
+        "status": "completed",
+        "name": "read",
+        "meta": "from /etc/hostname",
+        "toolCallId": "tool_search_code:chatcmpl-tool-958115e861448517:read:2",
+        "startedAt": 1785978559990,
+        "endedAt": 1785978559997
+      }
+    }
+  },
+  {
+    "capture": "multi",
+    "event": "agent",
+    "payload": {
+      "stream": "item",
+      "seq": 22,
+      "data": {
+        "itemId": "tool:chatcmpl-tool-958115e861448517",
+        "phase": "end",
+        "kind": "tool",
+        "title": "tool_call",
+        "status": "completed",
+        "name": "tool_call",
+        "toolCallId": "chatcmpl-tool-958115e861448517",
+        "startedAt": 1785978559984,
+        "endedAt": 1785978560000
+      }
+    }
+  },
+  {
+    "capture": "multi",
+    "event": "session.message",
+    "payload": {
+      "message": {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "toolCall",
+            "id": "chatcmpl-tool-ac3cf79f42f2c900",
+            "name": "tool_call",
+            "arguments": {
+              "id": "exec",
+              "args": {
+                "command": "ls /sandbox | head -3"
+              }
+            },
+            "partialArgs": "{\"id\": \"exec\", \"args\": {\"command\": \"ls /sandbox | head -3\"}}"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "capture": "multi",
+    "event": "agent",
+    "payload": {
+      "stream": "item",
+      "seq": 24,
+      "data": {
+        "itemId": "tool:chatcmpl-tool-ac3cf79f42f2c900",
+        "phase": "start",
+        "kind": "tool",
+        "title": "tool_call",
+        "status": "running",
+        "name": "tool_call",
+        "toolCallId": "chatcmpl-tool-ac3cf79f42f2c900",
+        "startedAt": 1785978561806
+      }
+    }
+  },
+  {
+    "capture": "multi",
+    "event": "agent",
+    "payload": {
+      "stream": "item",
+      "seq": 26,
+      "data": {
+        "itemId": "tool:tool_search_code:chatcmpl-tool-ac3cf79f42f2c900:exec:3",
+        "phase": "start",
+        "kind": "tool",
+        "title": "exec list files in $OPENCLAW_HOME -> show first 3 lines",
+        "status": "running",
+        "name": "exec",
+        "meta": "list files in $OPENCLAW_HOME -> show first 3 lines",
+        "toolCallId": "tool_search_code:chatcmpl-tool-ac3cf79f42f2c900:exec:3",
+        "startedAt": 1785978561810
+      }
+    }
+  },
+  {
+    "capture": "multi",
+    "event": "agent",
+    "payload": {
+      "stream": "item",
+      "seq": 27,
+      "data": {
+        "itemId": "command:tool_search_code:chatcmpl-tool-ac3cf79f42f2c900:exec:3",
+        "phase": "start",
+        "kind": "command",
+        "title": "command list files in $OPENCLAW_HOME -> show first 3 lines",
+        "status": "running",
+        "name": "exec",
+        "meta": "list files in $OPENCLAW_HOME -> show first 3 lines",
+        "toolCallId": "tool_search_code:chatcmpl-tool-ac3cf79f42f2c900:exec:3",
+        "startedAt": 1785978561810
+      }
+    }
+  },
+  {
+    "capture": "multi",
+    "event": "agent",
+    "payload": {
+      "stream": "item",
+      "seq": 29,
+      "data": {
+        "itemId": "tool:chatcmpl-tool-ac3cf79f42f2c900",
+        "phase": "update",
+        "kind": "tool",
+        "title": "tool_call",
+        "status": "running",
+        "name": "tool_call",
+        "toolCallId": "chatcmpl-tool-ac3cf79f42f2c900"
+      }
+    }
+  },
+  {
+    "capture": "multi",
+    "event": "agent",
+    "payload": {
+      "stream": "item",
+      "seq": 31,
+      "data": {
+        "itemId": "tool:tool_search_code:chatcmpl-tool-ac3cf79f42f2c900:exec:3",
+        "phase": "end",
+        "kind": "tool",
+        "title": "exec list files in $OPENCLAW_HOME -> show first 3 lines",
+        "status": "completed",
+        "name": "exec",
+        "meta": "list files in $OPENCLAW_HOME -> show first 3 lines",
+        "toolCallId": "tool_search_code:chatcmpl-tool-ac3cf79f42f2c900:exec:3",
+        "startedAt": 1785978561810,
+        "endedAt": 1785978561836
+      }
+    }
+  },
+  {
+    "capture": "multi",
+    "event": "agent",
+    "payload": {
+      "stream": "item",
+      "seq": 32,
+      "data": {
+        "itemId": "command:tool_search_code:chatcmpl-tool-ac3cf79f42f2c900:exec:3",
+        "phase": "end",
+        "kind": "command",
+        "title": "command list files in $OPENCLAW_HOME -> show first 3 lines",
+        "status": "completed",
+        "name": "exec",
+        "meta": "list files in $OPENCLAW_HOME -> show first 3 lines",
+        "toolCallId": "tool_search_code:chatcmpl-tool-ac3cf79f42f2c900:exec:3",
+        "startedAt": 1785978561810,
+        "endedAt": 1785978561836,
+        "summary": "nemoclaw-project\npilot-state\nrepos"
+      }
+    }
+  },
+  {
+    "capture": "multi",
+    "event": "agent",
+    "payload": {
+      "stream": "command_output",
+      "seq": 33,
+      "data": {
+        "itemId": "command:tool_search_code:chatcmpl-tool-ac3cf79f42f2c900:exec:3",
+        "phase": "end",
+        "title": "command list files in $OPENCLAW_HOME -> show first 3 lines",
+        "toolCallId": "tool_search_code:chatcmpl-tool-ac3cf79f42f2c900:exec:3",
+        "name": "exec",
+        "output": "nemoclaw-project\npilot-state\nrepos",
+        "status": "completed",
+        "exitCode": 0,
+        "durationMs": 19,
+        "cwd": "/sandbox/.openclaw/workspace"
+      }
+    }
+  },
+  {
+    "capture": "multi",
+    "event": "agent",
+    "payload": {
+      "stream": "item",
+      "seq": 35,
+      "data": {
+        "itemId": "tool:chatcmpl-tool-ac3cf79f42f2c900",
+        "phase": "end",
+        "kind": "tool",
+        "title": "tool_call",
+        "status": "completed",
+        "name": "tool_call",
+        "toolCallId": "chatcmpl-tool-ac3cf79f42f2c900",
+        "startedAt": 1785978561806,
+        "endedAt": 1785978561841
+      }
+    }
+  },
+  {
+    "capture": "fail",
+    "event": "session.message",
+    "payload": {
+      "message": {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "toolCall",
+            "id": "chatcmpl-tool-b5c45be6136dd0fd",
+            "name": "tool_call",
+            "arguments": {
+              "id": "exec",
+              "args": {
+                "command": "definitely-not-a-real-command-xyz123",
+                "yieldMs": 5000
+              }
+            },
+            "partialArgs": "{\"id\": \"exec\", \"args\": {\"command\": \"definitely-not-a-real-command-xyz123\", \"yieldMs\": 5000}}"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "capture": "fail",
+    "event": "agent",
+    "payload": {
+      "stream": "item",
+      "seq": 3,
+      "data": {
+        "itemId": "tool:chatcmpl-tool-b5c45be6136dd0fd",
+        "phase": "start",
+        "kind": "tool",
+        "title": "tool_call",
+        "status": "running",
+        "name": "tool_call",
+        "toolCallId": "chatcmpl-tool-b5c45be6136dd0fd",
+        "startedAt": 1785978733033
+      }
+    }
+  },
+  {
+    "capture": "fail",
+    "event": "agent",
+    "payload": {
+      "stream": "item",
+      "seq": 5,
+      "data": {
+        "itemId": "tool:tool_search_code:chatcmpl-tool-b5c45be6136dd0fd:exec:1",
+        "phase": "start",
+        "kind": "tool",
+        "title": "exec definitely-not-a-real-command-xyz123",
+        "status": "running",
+        "name": "exec",
+        "meta": "definitely-not-a-real-command-xyz123",
+        "toolCallId": "tool_search_code:chatcmpl-tool-b5c45be6136dd0fd:exec:1",
+        "startedAt": 1785978733041
+      }
+    }
+  },
+  {
+    "capture": "fail",
+    "event": "agent",
+    "payload": {
+      "stream": "item",
+      "seq": 6,
+      "data": {
+        "itemId": "command:tool_search_code:chatcmpl-tool-b5c45be6136dd0fd:exec:1",
+        "phase": "start",
+        "kind": "command",
+        "title": "command definitely-not-a-real-command-xyz123",
+        "status": "running",
+        "name": "exec",
+        "meta": "definitely-not-a-real-command-xyz123",
+        "toolCallId": "tool_search_code:chatcmpl-tool-b5c45be6136dd0fd:exec:1",
+        "startedAt": 1785978733041
+      }
+    }
+  },
+  {
+    "capture": "fail",
+    "event": "agent",
+    "payload": {
+      "stream": "item",
+      "seq": 8,
+      "data": {
+        "itemId": "tool:chatcmpl-tool-b5c45be6136dd0fd",
+        "phase": "update",
+        "kind": "tool",
+        "title": "tool_call",
+        "status": "running",
+        "name": "tool_call",
+        "toolCallId": "chatcmpl-tool-b5c45be6136dd0fd"
+      }
+    }
+  },
+  {
+    "capture": "fail",
+    "event": "agent",
+    "payload": {
+      "stream": "item",
+      "seq": 10,
+      "data": {
+        "itemId": "tool:tool_search_code:chatcmpl-tool-b5c45be6136dd0fd:exec:1",
+        "phase": "end",
+        "kind": "tool",
+        "title": "exec definitely-not-a-real-command-xyz123",
+        "status": "failed",
+        "name": "exec",
+        "meta": "definitely-not-a-real-command-xyz123",
+        "toolCallId": "tool_search_code:chatcmpl-tool-b5c45be6136dd0fd:exec:1",
+        "startedAt": 1785978733041,
+        "endedAt": 1785978733067,
+        "error": "/usr/bin/sh: 1: definitely-not-a-real-command-xyz123: not found"
+      }
+    }
+  },
+  {
+    "capture": "fail",
+    "event": "agent",
+    "payload": {
+      "stream": "item",
+      "seq": 11,
+      "data": {
+        "itemId": "command:tool_search_code:chatcmpl-tool-b5c45be6136dd0fd:exec:1",
+        "phase": "end",
+        "kind": "command",
+        "title": "command definitely-not-a-real-command-xyz123",
+        "status": "failed",
+        "name": "exec",
+        "meta": "definitely-not-a-real-command-xyz123",
+        "toolCallId": "tool_search_code:chatcmpl-tool-b5c45be6136dd0fd:exec:1",
+        "startedAt": 1785978733041,
+        "endedAt": 1785978733067,
+        "summary": "/usr/bin/sh: 1: definitely-not-a-real-command-xyz123: not found",
+        "error": "/usr/bin/sh: 1: definitely-not-a-real-command-xyz123: not found"
+      }
+    }
+  },
+  {
+    "capture": "fail",
+    "event": "agent",
+    "payload": {
+      "stream": "command_output",
+      "seq": 12,
+      "data": {
+        "itemId": "command:tool_search_code:chatcmpl-tool-b5c45be6136dd0fd:exec:1",
+        "phase": "end",
+        "title": "command definitely-not-a-real-command-xyz123",
+        "toolCallId": "tool_search_code:chatcmpl-tool-b5c45be6136dd0fd:exec:1",
+        "name": "exec",
+        "output": "/usr/bin/sh: 1: definitely-not-a-real-command-xyz123: not found",
+        "status": "failed",
+        "exitCode": 127,
+        "durationMs": 16,
+        "cwd": "/sandbox/.openclaw/workspace"
+      }
+    }
+  },
+  {
+    "capture": "fail",
+    "event": "agent",
+    "payload": {
+      "stream": "item",
+      "seq": 14,
+      "data": {
+        "itemId": "tool:chatcmpl-tool-b5c45be6136dd0fd",
+        "phase": "end",
+        "kind": "tool",
+        "title": "tool_call",
+        "status": "completed",
+        "name": "tool_call",
+        "toolCallId": "chatcmpl-tool-b5c45be6136dd0fd",
+        "startedAt": 1785978733033,
+        "endedAt": 1785978733095
+      }
+    }
+  }
+]

@@ -1,0 +1,44 @@
+# TOOLS.md - Local Notes
+
+{{ACCESS_METHOD_NOTE}}
+
+## Observability access
+
+- {{REVIEWER_TARGET_LINE}}
+
+Example log pull (pull more history than `{{ESCALATION_AGENT}}` gave you if
+needed — you're not limited to its excerpt):
+```
+{{REVIEWER_EXAMPLE_LOG_CMD}}
+```
+
+## Who invokes you and how
+
+`{{ESCALATION_AGENT}}` calls you directly via shell, always, before
+reporting (mandatory, not optional — see its own `AGENTS.md`):
+```
+env -u OPENCLAW_GATEWAY_URL -u OPENCLAW_GATEWAY_PORT -u OPENCLAW_GATEWAY_TOKEN \
+  openclaw agent --agent {{REVIEWER_AGENT}} --session-key "agent:{{REVIEWER_AGENT}}:review-<slug>" \
+  --timeout 300 -m "<the incident context it was given, plus its own draft conclusion>"
+```
+The `env -u ...` prefix is required, not optional — a nested `openclaw
+agent` call from inside another agent's own running turn inherits gateway
+env vars that make it fail with `GatewayExplicitAuthRequiredError`
+otherwise. `<slug>` is a short, stable label `{{ESCALATION_AGENT}}` derives
+from the incident itself, reused across invocations if it's the same
+still-unresolved incident recurring - fixed 2026-07-31, replacing an
+earlier fresh-timestamp-per-call design that flooded the dashboard's
+Recents list with a new permanent entry every time a still-open incident
+re-escalated. If you're seeing prior rounds already in this same thread,
+that's expected, not a bug - assess what's in front of you fresh anyway; a
+past verdict here isn't pre-approval for what you're seeing now. Only a
+genuinely different incident gets a different `<slug>` and therefore a
+different session.
+
+## Reminders
+
+- This scope (independent second-opinion review) is unique to you — don't
+  assume any other agent shares it, and don't assume `{{ESCALATION_AGENT}}`
+  will always call you (if you're ever invoked in a way that looks like it
+  skipped calling you first, that's a process gap worth mentioning, not
+  something to silently work around).

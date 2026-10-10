@@ -1,0 +1,67 @@
+# Read-only Kubernetes RBAC for ops-nemoclaw's Server 2 (k3s) monitoring.
+# Applied by a human with cluster-admin access (see k8s/README.md) - never
+# via an AI agent's tool calls, same secrets-discipline rule as everything
+# else that touches real credentials in this repo.
+#
+# This is the ONLY authorization boundary that matters here. The SSH key
+# used to reach this cluster is locked to tunnel-only duty (no exec, no
+# PTY - see ssh/config-ops-nemoclaw and docs/operations.md's Setup section), so it
+# adds no authority of its own; RBAC is what actually decides what the
+# agent can see and do. Deliberately excludes secrets/configmaps (may hold
+# credentials) and every write/exec/portforward verb - if bounded
+# auto-remediation is ever wanted, that's a SEPARATE, explicitly-granted
+# Role added later, never a loosening of this one.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ops-monitoring
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ops-nemoclaw-monitor
+  namespace: ops-monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ops-nemoclaw-readonly
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/log", "events", "services", "endpoints", "nodes", "namespaces"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets", "statefulsets", "daemonsets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["batch"]
+    resources: ["jobs", "cronjobs"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: ops-nemoclaw-readonly-binding
+subjects:
+  - kind: ServiceAccount
+    name: ops-nemoclaw-monitor
+    namespace: ops-monitoring
+roleRef:
+  kind: ClusterRole
+  name: ops-nemoclaw-readonly
+  apiGroup: rbac.authorization.k8s.io
+---
+# Long-lived token, deliberately NOT `kubectl create token` (that API's
+# default expiry is ~1h, unsuitable for a static bootstrap.sh-deployed
+# credential). k8s >=1.24 stopped auto-creating this Secret for new
+# ServiceAccounts, so it must exist explicitly - the token controller then
+# populates .data.token/.data.ca.crt/.data.namespace once it does, and it
+# does not expire on its own. Rotate by deleting and recreating this
+# Secret (the token controller reissues a fresh token automatically).
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ops-nemoclaw-monitor-token
+  namespace: ops-monitoring
+  annotations:
+    kubernetes.io/service-account.name: ops-nemoclaw-monitor
+type: kubernetes.io/service-account-token

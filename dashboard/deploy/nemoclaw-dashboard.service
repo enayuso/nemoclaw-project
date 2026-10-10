@@ -1,0 +1,46 @@
+# nemoclaw-dashboard.service - systemd unit for the ops-nemoclaw
+# dashboard. Proportionate to a v1 thin slice: no HA, no process manager
+# beyond Restart=on-failure, no reverse proxy in front of it.
+#
+# Install (run directly by a human, same "don't let an agent touch
+# shared host config unreviewed" reasoning bootstrap.sh already applies):
+#   sudo cp dashboard/deploy/nemoclaw-dashboard.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now nemoclaw-dashboard
+#   journalctl -u nemoclaw-dashboard -f
+#
+# EDIT THESE THREE LINES FIRST - the values below are best-guess defaults
+# based on the ops-s006 account path used elsewhere in this repo, not
+# confirmed against the real host:
+#   - WorkingDirectory (confirm the real absolute path to dashboard/)
+#   - User / Group (confirm this is really `ops-s006`)
+#   - EnvironmentFile is implied by WorkingDirectory + config.js's own
+#     path.join(__dirname, "..", ".env") - no separate line needed unless
+#     you want systemd itself to also see these vars, which it doesn't
+#     need to for this app.
+
+[Unit]
+Description=ops-nemoclaw dashboard
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/ops-s006/nemoclaw-project/dashboard
+User=ops-s006
+Group=ops-s006
+# Confirmed live 2026-07-30: unset anywhere in this deploy, which left
+# Express defaulting to development mode - full stack traces (real
+# filesystem paths) leaking to any unauthenticated caller on any error.
+# See server.js's own error-handler comment for the full story. This line
+# alone doesn't fix anything by itself; it works together with that
+# handler - production mode also disables a few of Express's own verbose
+# defaults independent of our handler.
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/node server.js
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

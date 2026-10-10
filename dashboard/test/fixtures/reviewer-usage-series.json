@@ -1,0 +1,142 @@
+[
+  {
+    "input": 7691,
+    "output": 227,
+    "cacheRead": 0,
+    "cacheWrite": 0,
+    "totalTokens": 7918
+  },
+  {
+    "input": 30058,
+    "output": 427,
+    "cacheRead": 0,
+    "cacheWrite": 0,
+    "totalTokens": 30485
+  },
+  {
+    "input": 33876,
+    "output": 195,
+    "cacheRead": 0,
+    "cacheWrite": 0,
+    "totalTokens": 34071
+  },
+  {
+    "input": 34206,
+    "output": 681,
+    "cacheRead": 0,
+    "cacheWrite": 0,
+    "totalTokens": 34887
+  },
+  {
+    "input": 34557,
+    "output": 97,
+    "cacheRead": 0,
+    "cacheWrite": 0,
+    "totalTokens": 34654
+  },
+  {
+    "input": 35893,
+    "output": 139,
+    "cacheRead": 0,
+    "cacheWrite": 0,
+    "totalTokens": 36032
+  },
+  {
+    "input": 36784,
+    "output": 147,
+    "cacheRead": 0,
+    "cacheWrite": 0,
+    "totalTokens": 36931
+  },
+  {
+    "input": 37422,
+    "output": 104,
+    "cacheRead": 0,
+    "cacheWrite": 0,
+    "totalTokens": 37526
+  },
+  {
+    "input": 38152,
+    "output": 99,
+    "cacheRead": 0,
+    "cacheWrite": 0,
+    "totalTokens": 38251
+  },
+  {
+    "input": 39244,
+    "output": 132,
+    "cacheRead": 0,
+    "cacheWrite": 0,
+    "totalTokens": 39376
+  },
+  {
+    "input": 39667,
+    "output": 222,
+    "cacheRead": 0,
+    "cacheWrite": 0,
+    "totalTokens": 39889
+  },
+  {
+    "input": 40185,
+    "output": 157,
+    "cacheRead": 0,
+    "cacheWrite": 0,
+    "totalTokens": 40342
+  },
+  {
+    "input": 40584,
+    "output": 119,
+    "cacheRead": 0,
+    "cacheWrite": 0,
+    "totalTokens": 40703
+  },
+  {
+    "input": 41942,
+    "output": 442,
+    "cacheRead": 0,
+    "cacheWrite": 0,
+    "totalTokens": 42384
+  },
+  {
+    "input": 42424,
+    "output": 728,
+    "cacheRead": 0,
+    "cacheWrite": 0,
+    "totalTokens": 43152
+  },
+  {
+    "input": 43024,
+    "output": 1702,
+    "cacheRead": 0,
+    "cacheWrite": 0,
+    "totalTokens": 44726
+  },
+  {
+    "input": 44596,
+    "output": 1005,
+    "cacheRead": 0,
+    "cacheWrite": 0,
+    "totalTokens": 45601
+  },
+  {
+    "input": 45374,
+    "output": 577,
+    "cacheRead": 0,
+    "cacheWrite": 0,
+    "totalTokens": 45951
+  },
+  {
+    "input": 0,
+    "output": 0,
+    "cacheRead": 0,
+    "cacheWrite": 0,
+    "totalTokens": 0
+  },
+  {
+    "input": 0,
+    "output": 0,
+    "cacheRead": 0,
+    "cacheWrite": 0,
+    "totalTokens": 0
+  }
+]

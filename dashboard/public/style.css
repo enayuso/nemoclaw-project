@@ -1,0 +1,3344 @@
+:root {
+  color-scheme: dark;
+
+  /* Refined dark palette - deeper background, subtle elevation, crisp borders */
+  --bg: #0b0e14;
+  --bg-elevated: #11151d;
+  --panel: #141924;
+  --panel-2: #1a202c;
+  --border: #262d3a;
+  --border-soft: #212735;
+  --text: #e6e9ef;
+  --muted: #8a93a5;
+  --accent: #38bdf8;
+  --accent-strong: #0ea5e9;
+  --accent-dim: rgba(56, 189, 248, 0.12);
+  --ok: #34d399;
+  --ok-dim: rgba(52, 211, 153, 0.12);
+  --warn: #fbbf24;
+  --warn-dim: rgba(251, 191, 36, 0.12);
+  --fail: #f87171;
+  --fail-dim: rgba(248, 113, 113, 0.12);
+  --code: #c4b5fd;
+  --terminal: #5eead4;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.25);
+
+  /* One standard size for every modal (2026-08-06). These panels used to be
+     `max-height`, i.e. content-sized, so switching an Ops tab resized the
+     whole window - Fixes with a dozen rows was tall, Watchers was short,
+     and the panel jumped under the pointer on every click. A fixed height
+     makes the window a constant and lets each category scroll inside it.
+     Shared as a variable so "standard" is one value in one place rather
+     than a number that drifts between modals.
+
+     560 rather than Ops' old 620 max: a single standard has to suit the
+     lightest modal as well as the heaviest, and Settings currently holds
+     one row - at 620 it was mostly dead space. Ops scrolls either way once
+     Fixes has more than a handful of rows. */
+  --modal-height: 560px;
+
+  --font-ui:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", "Helvetica Neue",
+    Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas,
+    "Liberation Mono", monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 15px;
+  line-height: 1.5;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--accent-dim);
+}
+
+/* Accessible focus treatment for keyboard users */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+button {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.45rem 0.95rem;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.9rem;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+button:hover {
+  border-color: var(--accent);
+  background: var(--panel-2);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+input,
+select,
+textarea {
+  background: var(--bg-elevated);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.65rem;
+  font-family: inherit;
+  font-size: 0.9rem;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+.error {
+  color: var(--fail);
+  font-size: 0.85rem;
+}
+
+/* :not([hidden]) rather than a bare #login-view/#app-view rule - an ID
+   selector has higher specificity than the browser's built-in
+   [hidden] { display: none } rule, so a bare display:flex/grid here would
+   always win and keep the section visible even with hidden set. Confirmed
+   live 2026-07-23: both sections rendered simultaneously without this. */
+#login-view:not([hidden]) {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background:
+    radial-gradient(1200px 600px at 70% -10%, rgba(56, 189, 248, 0.06), transparent 60%),
+    radial-gradient(900px 500px at 10% 110%, rgba(52, 211, 153, 0.045), transparent 60%),
+    var(--bg);
+}
+
+.login-card {
+  width: 320px;
+  padding: 2rem 2rem 1.75rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+.login-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.login-brand h1 {
+  font-size: 1.2rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.login-subtitle {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+#login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+#login-form label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 0.1rem;
+}
+
+#login-form input {
+  padding: 0.6rem 0.7rem;
+}
+
+#login-form button {
+  margin-top: 0.35rem;
+  padding: 0.55rem 0.95rem;
+  font-weight: 600;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #06101a;
+}
+
+#login-form button:hover {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+}
+
+#login-error {
+  margin: 0.35rem 0 0;
+  text-align: center;
+}
+
+/* Chatbot-style shell: a collapsible sidebar + a main pane whose
+   conversation area scrolls independently while the composer stays
+   pinned to the bottom, same overall structure Claude's own UI uses. */
+#app-view:not([hidden]) {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#sidebar {
+  width: 264px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 0.9rem;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  transition: margin-left 0.15s ease;
+}
+
+#sidebar.collapsed {
+  margin-left: -265px; /* border included so nothing peeks through */
+}
+
+#sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.1rem 0.1rem 0.4rem;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.sidebar-title {
+  font-weight: 650;
+  font-size: 0.92rem;
+  letter-spacing: -0.01em;
+}
+
+#sidebar-toggle,
+#sidebar-open-btn {
+  padding: 0.25rem 0.55rem;
+  font-size: 0.8rem;
+  line-height: 1;
+  color: var(--muted);
+  border-radius: var(--radius-sm);
+}
+
+#sidebar-toggle:hover,
+#sidebar-open-btn:hover {
+  color: var(--text);
+}
+
+/* Sidebar navigation - flat rows, no button chrome (2026-08-06). The base
+   `button` rule gives every button a panel background and a border, which
+   stacked two bordered "bars" at the top of the sidebar; these are
+   navigation, so they get the same treatment as the Recents entries below
+   them: no box at rest, a soft rounded fill on hover, and the accent tint
+   only for the row you're actually on. */
+#sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.sidebar-nav-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 0.55rem;
+  border: none;
+  background: none;
+  border-radius: var(--radius-sm);
+  font-size: 0.86rem;
+  font-weight: 500;
+  color: var(--text);
+  text-align: left;
+}
+
+.sidebar-nav-item:hover {
+  border-color: transparent;
+  background: var(--panel-2);
+}
+
+/* Set while the Ops modal is open, so the row reads as the surface you're
+   currently in rather than staying inert behind its own modal.
+   aria-expanded covers the two footer rows, whose dropdowns open straight
+   out of them - without a border of their own there is otherwise nothing
+   tying an open menu back to the row that opened it. */
+.sidebar-nav-item[aria-current="true"],
+.sidebar-nav-item[aria-expanded="true"] {
+  background: var(--accent-dim);
+  color: var(--text);
+}
+
+/* The leading symbol's SLOT, deliberately separate from what's drawn in it
+   (2026-08-06). The four rows carry three different kinds of symbol - two
+   inline SVGs, a text glyph, and a gradient avatar - and each was sized by
+   its own content: 16px for the SVGs, 8.3px for the ◔ glyph, 25.6px for the
+   avatar. That put the four labels at three different left edges (34.4 /
+   26.7 / 44px) and made the rows three different heights, which is what
+   read as "the alignment and font are off" - the fonts were already
+   identical. A fixed box makes every label start at the same x no matter
+   what sits in front of it. */
+.sidebar-nav-symbol {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+/* Purely the SVG's own paint - size comes from the slot above, so this can
+   be worn alongside it without the two fighting over width/height. */
+.sidebar-nav-icon {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  color: var(--muted);
+}
+
+/* Same content box for every row regardless of what its symbol or badge
+   happens to measure - without this the avatar row stood 40px tall against
+   the 30.4px of the plain icon rows. */
+.sidebar-nav-item {
+  min-height: 2.2rem;
+}
+
+.sidebar-nav-item:hover .sidebar-nav-icon,
+.sidebar-nav-item[aria-current="true"] .sidebar-nav-icon {
+  color: var(--accent);
+}
+
+/* Pushes the badge to the far edge without needing space-between on the
+   row itself, which would also stretch the icon-to-label gap. */
+.sidebar-nav-label {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Repositories is deliberately NOT part of the nav above - it's required
+   context, not a destination - so it sits under a rule that separates the
+   two without adding another heavy border to a sidebar that already has
+   several. */
+#repo-section {
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-soft);
+}
+
+.sidebar-section select,
+.sidebar-section button {
+  width: 100%;
+}
+
+.sidebar-section h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.68rem;
+  font-weight: 650;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.sidebar-section label {
+  display: block;
+  margin-bottom: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.sidebar-grow {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  margin-left: -0.2rem;
+  padding-left: 0.2rem;
+}
+
+.sidebar-empty {
+  color: var(--muted);
+  font-size: 0.82rem;
+  margin: 0;
+}
+
+#recents-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+/* Sidebar footer - the stage/activity/account controls live here as
+   in-flow entries at the bottom of the sidebar, so they collapse with it
+   when the sidebar is collapsed (unlike the old fixed bottom-right
+   placement). The Recents list above scrolls internally (.sidebar-grow),
+   keeping this footer pinned to the sidebar's bottom edge. */
+#sidebar-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-soft);
+  flex-shrink: 0;
+}
+
+#sidebar-footer > div {
+  position: relative;
+}
+
+/* A row is a plain div now (was the clickable <button> itself) wrapping
+   two separate buttons - .recents-item-open (the bulk of the row, opens
+   the conversation) and .recents-item-delete (a small hover-revealed
+   icon button) - a <button> can't validly nest another interactive
+   element inside it, which is why this couldn't stay one element once a
+   delete action was added. */
+.recents-item {
+  display: flex;
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+}
+
+.recents-item:hover {
+  border-color: var(--border);
+  background: var(--bg-elevated);
+}
+
+.recents-item.active {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+}
+
+/* .recents-item-open/.recents-item-delete below - selectors prefixed with
+   .recents-item (not bare .recents-item-open/-delete) specifically so
+   their `width: auto` beats ".sidebar-section button { width: 100% }"
+   (this row lives inside a .sidebar-section): that rule is 1 class + 1
+   type selector, a HIGHER specificity than a single bare class selector
+   regardless of which comes later in the file - confirmed live 2026-07-24
+   the hard way, `width: auto` on the bare class silently lost the
+   cascade and .recents-item-delete rendered at ~225px wide (should be a
+   few px), squeezing .recents-item-open down to nothing. Two classes
+   (.recents-item + the element's own) reliably outweighs one class + one
+   type selector. */
+.recents-item .recents-item-open {
+  flex: 1;
+  width: auto;
+  min-width: 0; /* lets text-overflow:ellipsis below actually truncate inside a flex item */
+  display: block;
+  text-align: left;
+  padding: 0.5rem 0.6rem;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+}
+
+.recents-item-label {
+  font-size: 0.82rem;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recents-item-meta {
+  margin-top: 0.2rem;
+  font-size: 0.7rem;
+  color: var(--muted);
+  font-family: var(--font-mono);
+}
+
+/* Marks a Recents entry the Gateway itself reported for a registered
+   repo's escalation agent but that was never started through this
+   dashboard's own composer (e.g. another repo's escalation agent
+   cross-referencing this one via registry/schema.md's correlate_with
+   mechanism) - same size/position as .recents-item-meta, just tinted with
+   --accent so it reads as "discovered", not "started here". */
+.recents-item-meta-gateway {
+  color: var(--accent);
+}
+
+/* "You already sent a decision here" marker - see app.js's renderRecents()
+   for the full reasoning on why this is deliberately not styled/worded as
+   "resolved". Reuses --ok (the same green the Watchers/cron status table
+   already uses for a healthy row) so this reads as the same "handled"
+   signal elsewhere in this dashboard, not a new color meaning a new
+   thing. */
+.recents-item-decision {
+  margin-top: 0.2rem;
+  font-size: 0.7rem;
+  color: var(--ok);
+}
+
+/* Hidden until the row is hovered/focused - matches Claude's own sidebar
+   convention of not permanently cluttering every row with a delete
+   affordance. A real (not display:none) element throughout, so it's
+   still keyboard-reachable via Tab even before the row is hovered. */
+.recents-item .recents-item-delete {
+  flex-shrink: 0;
+  /* Confirmed live 2026-07-24: without both this selector's extra
+     specificity AND this declaration, ".sidebar-section button { width:
+     100% }" (this row lives inside a .sidebar-section) became this
+     item's flex-basis (flex-basis defaults to auto, which defers to
+     width when one's set) - with flex-shrink:0 also set, the button
+     refused to shrink from a 100%-of-row basis, eating nearly the whole
+     row and squeezing .recents-item-open down to a few px. See the
+     comment on .recents-item .recents-item-open above for why the extra
+     ".recents-item " prefix is required, not optional, here. */
+  width: auto;
+  opacity: 0;
+  margin-right: 0.4rem;
+  padding: 0.2rem 0.5rem;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.recents-item:hover .recents-item-delete,
+.recents-item-delete:focus-visible {
+  opacity: 1;
+}
+
+.recents-item-delete:hover {
+  color: var(--fail);
+}
+
+#repo-meta {
+  margin-top: 0.7rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+#repo-meta p {
+  margin: 0 0 0.3rem;
+}
+
+#main-pane {
+  flex: 1;
+  min-width: 0;
+  min-height: 0; /* see #conversation's comment below - without this, a tall
+    conversation could grow #main-pane past #app-view's 100vh/overflow:hidden
+    box instead of scrolling within it, silently clipping the tail end of
+    the transcript instead of making it reachable by scroll. */
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--bg);
+}
+
+#main-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.5rem;
+  border-bottom: 1px solid var(--border-soft);
+  flex-shrink: 0;
+  background: rgba(17, 21, 29, 0.6);
+  backdrop-filter: blur(6px);
+}
+
+#main-header h2 {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+#session-key-label {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-family: var(--font-mono);
+}
+
+/* The scroll container itself now spans #main-pane's FULL width (was
+   previously max-width:800px + margin:0 auto on this same element, which
+   made #conversation's own box - the thing overflow-y:auto actually
+   applies to - only as wide as the text column). That's why the mouse had
+   to be directly over the narrow text column to scroll at all (anywhere
+   else was outside #conversation's box, so wheel events landed on
+   #main-pane instead), and why the native scrollbar rendered at the
+   column's edge instead of the page's true right edge - both confirmed
+   live 2026-07-24, reported as "not like how Claude Code does it".
+   #conversation-inner (below) now owns the max-width/centering instead,
+   matching Claude Code's own split: full-width scroll track, centered
+   content column. */
+#conversation {
+  flex: 1;
+  min-height: 0; /* a flex item's automatic min-height is content-based by
+    default, which can override flex:1 and let this grow to fit the whole
+    transcript instead of being capped and handing the overflow to
+    overflow-y:auto below - this is what made the tail of a long
+    conversation unreachable (reported live 2026-07-26), not a broken
+    scrollbar. */
+  overflow-y: auto;
+  width: 100%;
+  scrollbar-gutter: stable;
+}
+
+#conversation::-webkit-scrollbar {
+  width: 10px;
+}
+
+#conversation::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+  border: 2px solid var(--bg);
+}
+
+#conversation::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+#conversation-inner {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 1.75rem 1.75rem 2rem;
+}
+
+#conversation-empty {
+  color: var(--muted);
+  text-align: center;
+  margin-top: 3rem;
+  font-size: 0.92rem;
+}
+
+#status-banner {
+  font-size: 0.8rem;
+  margin-bottom: 0.5rem;
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+/* Inline completion note - a single muted line on the next line after the
+   agent's final output, replacing the old top-of-chatroom "agent
+   completed/failed" banner for terminal states. The note's own text is just
+   a live-updating relative time (formatted in app.js's formatRelativeTime,
+   re-rendered on a 60s interval); the completed/failed/aborted kind is read
+   from the .state-* color class, not repeated in words. Errors (lifecycle
+   phase:"error" / dashboard.error) still use the #status-banner instead and
+   aren't affected by this rule.
+   The rule is scoped under #transcript so it beats the generic
+   `#transcript p` margin reset (same specificity class, but #transcript
+   .completion-note carries the extra class). */
+#transcript .completion-note {
+  margin: 0;
+  padding: 0;
+  font-size: 0.8rem;
+  font-family: var(--font-mono);
+  color: var(--muted);
+}
+#transcript .completion-note.state-completed { color: var(--ok); }
+#transcript .completion-note.state-failed { color: var(--fail); }
+#transcript .completion-note.state-aborted { color: var(--muted); }
+
+/* Closes the gap between the agent's last line and the note directly under
+   it. `.chat-turn-body > :last-child { margin-bottom: 0 }` above looks like
+   it already does this, but `#transcript p` outweighs it 101-to-20, so a
+   paragraph keeps its 0.9em regardless - measured live as a 14px gap that
+   read exactly like this whole change having silently not applied. The ID
+   here is what makes the override stick (see the .completion-note rule's own
+   note on the same trap), and app.js's marker class scopes it to turns that
+   actually have a note rather than restyling every turn in the app. */
+#transcript .chat-turn.has-completion-note .chat-turn-body > :last-child {
+  margin-bottom: 0;
+}
+
+/* Hover-reveal, matching Claude Code's own convention of a per-message
+   timestamp that stays out of the way until you look for it. Reserved in
+   flow and faded rather than removed from layout: revealing it must not
+   reflow the transcript, or the line the pointer is resting on would shift
+   out from under it at the moment of hover.
+
+   Scoped to notes inside a .chat-turn deliberately - a fallback note that
+   had no turn to anchor in (see completionNoteHost) is NOT inside one, has
+   no hover target of its own, and so stays visible by not matching this. */
+.chat-turn .completion-note {
+  opacity: 0;
+  transition: opacity 0.12s ease-in;
+}
+
+.chat-turn:hover .completion-note,
+.chat-turn:focus-within .completion-note {
+  opacity: 1;
+}
+
+/* Nothing hovers on a touch screen, so the note would be permanently
+   invisible there. Show it unconditionally instead of hiding information
+   behind an interaction the device can't perform. */
+@media (hover: none) {
+  .chat-turn .completion-note {
+    opacity: 1;
+  }
+}
+
+/* Inline collapsible "Thinking" block - same .tool-group box/summary
+   convention as "Ran N commands" (request 2026-07-27), rendered inline in
+   chronological order instead of pinned to the top of the conversation.
+   Kept visually secondary to the final response (muted, smaller, italic
+   summary) - same intent as this rule's own predecessor, just no longer a
+   single fixed element. See buildThinkingGroup/closeThinkingGroup in
+   app.js, shared by the live path and history replay. */
+.thinking-group {
+  color: var(--muted);
+  font-size: 0.8rem;
+  border-color: var(--border-soft);
+  background: rgba(17, 21, 29, 0.5);
+}
+
+.thinking-group > summary {
+  font-style: italic;
+}
+
+.thinking-body {
+  max-height: 20vh;
+  overflow-y: auto;
+}
+
+.thinking-body > :first-child {
+  margin-top: 0;
+}
+
+.thinking-body > :last-child {
+  margin-bottom: 0;
+}
+
+.status-completed {
+  color: var(--ok);
+}
+
+.status-failed {
+  color: var(--fail);
+}
+
+.status-aborted {
+  color: var(--fail);
+}
+
+.status-started {
+  color: var(--accent);
+}
+
+.status-running {
+  color: var(--accent);
+}
+
+#transcript {
+  min-height: 4rem;
+  padding: 0.25rem 0;
+  margin-bottom: 0.75rem;
+}
+
+/* Transcript text is rendered Markdown (see app.js's
+   renderMarkdownToSafeHtml) - real HTML elements now, not preformatted
+   text, so these style the actual tags marked/DOMPurify can produce.
+   Kept deliberately flat/compact rather than a full document look, to fit
+   a clean chat transcript rather than a rendered article.
+   #transcript-history/#transcript-live's own direct children are
+   .chat-turn wrapper divs (see index.html/app.js's appendChatTurn), not
+   the actual content elements, so the first/last-child margin trim
+   targets each turn's OWN .chat-turn-body direct children instead.
+   Thinking blocks (.thinking-body) don't need their own copy of any of
+   this - they're rendered inline INSIDE #transcript-live/#transcript-history
+   now (see buildThinkingGroup), so every #transcript-scoped rule below
+   already reaches them as a plain descendant selector; only the
+   first/last-child margin trim needed its own explicit .thinking-body
+   rule (added above), since that one's specific to each container's own
+   direct children, not something a shared ancestor selector covers. */
+.chat-turn-body > :first-child {
+  margin-top: 0;
+}
+
+.chat-turn-body > :last-child {
+  margin-bottom: 0;
+}
+
+/* Agent output regularly carries tokens with no break opportunity in them
+   - base64/JWT blobs, opaque ids, error dumps. Without this, one such
+   token sets the min-content width of the whole transcript and
+   #conversation (the only overflow-x:auto ancestor) starts scrolling
+   sideways, dragging every OTHER message off-screen with it. Paths, URLs
+   and hashes were already fine - they break at / - : and -, so this is
+   specifically about the unbroken case. `anywhere` rather than
+   `break-word` because only `anywhere` also shrinks the min-content
+   contribution, which is what the flex-based user bubble sizes against.
+   A <pre> is unaffected (white-space:pre creates no soft wrap
+   opportunities for this to act on) so fenced code still scrolls in its
+   own box, verified live. .thinking-body gets it too - it renders the
+   same Markdown but sits outside .chat-turn-body. */
+.chat-turn-body,
+.thinking-body {
+  overflow-wrap: anywhere;
+}
+
+#transcript {
+  line-height: 1.65;
+}
+
+#transcript p {
+  margin: 0 0 0.9em;
+}
+
+#transcript h1,
+#transcript h2,
+#transcript h3,
+#transcript h4,
+#transcript h5,
+#transcript h6 {
+  margin: 1.2em 0 0.5em;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+#transcript h1 {
+  font-size: 1.5em;
+}
+
+#transcript h2 {
+  font-size: 1.3em;
+}
+
+#transcript h3 {
+  font-size: 1.15em;
+}
+
+#transcript h4,
+#transcript h5,
+#transcript h6 {
+  font-size: 1em;
+}
+
+#transcript code {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.13em 0.38em;
+  color: var(--code);
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+#transcript pre {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.85em 1.05em;
+  overflow-x: auto;
+  line-height: 1.55;
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  /* Both sides need real space, not just the bottom - a 0 top margin here
+     was why a fenced code block sat flush against whatever text preceded
+     it (e.g. directly under a "Body:" list item with no gap at all). */
+  margin: 0.9em 0;
+}
+
+#transcript pre:first-child {
+  margin-top: 0;
+}
+
+#transcript pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  /* The lavender tint above is for inline code specifically - a whole
+     fenced code block reads better in the normal text color. */
+  color: var(--text);
+  font-size: 1em;
+}
+
+/* display:block turns the table itself into the scroll container, so a
+   table with more columns than fit scrolls on its own instead of pushing
+   #conversation sideways (measured live: a 12-column table took the
+   conversation pane to 1794px against a 1006px viewport, shifting every
+   other message with it).
+
+   Known trade-off, accepted deliberately: under display:block the inner
+   rows no longer stretch to the block's width, so a table NARROWER than
+   the pane now renders at its content width instead of filling it (a
+   2-column table measured 120px where it used to be 764px). width:100%
+   is still what sizes the scroll viewport, it just no longer stretches
+   the cells. Keeping the old full-bleed look would mean wrapping each
+   table in a scroll div at render time instead - that means a
+   sanitize/serialize/re-parse round trip in renderMarkdownToSafeHtml
+   (the pattern DOMPurify warns about for mXSS) on a path that re-renders
+   every ~16ms while streaming, which isn't worth buying back a stretch. */
+#transcript table {
+  border-collapse: collapse;
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  margin: 0 0 0.75em;
+  font-size: 0.9em;
+}
+
+/* Opts cells back out of the .chat-turn-body `overflow-wrap: anywhere`
+   above. Inherited into a cell it defeats the scroll container the rule
+   right above adds: rather than the table staying its natural width and
+   scrolling, every column squeezes and headers break mid-word (a
+   12-column table collapsed to 63px-wide cells with "column_head/er_0"
+   split across lines). Cells keep normal wrapping and the table scrolls,
+   which is the whole point of making it the scroll container. */
+#transcript th,
+#transcript td {
+  border: 1px solid var(--border);
+  padding: 0.4em 0.65em;
+  text-align: left;
+  overflow-wrap: normal;
+}
+
+#transcript th {
+  background: var(--panel);
+  color: var(--muted);
+}
+
+#transcript ul,
+#transcript ol {
+  margin: 0.5em 0 0.9em;
+  padding-left: 1.4em;
+}
+
+#transcript li {
+  margin-bottom: 0.55em;
+}
+
+#transcript li:last-child {
+  margin-bottom: 0;
+}
+
+#transcript li > p {
+  margin-bottom: 0.55em;
+}
+
+#transcript li > ul,
+#transcript li > ol {
+  margin-top: 0.55em;
+}
+
+#transcript blockquote {
+  margin: 0 0 0.75em;
+  padding-left: 0.8em;
+  border-left: 3px solid var(--border);
+  color: var(--muted);
+}
+
+#transcript a {
+  color: var(--accent);
+  font-size: 1em;
+  text-decoration: none;
+}
+
+#transcript a:hover {
+  text-decoration: underline;
+}
+
+/* Wraps a run of consecutive tool calls with no narration between them
+   (see buildToolGroup/closeToolGroup in app.js) - the outer collapsible
+   matching Claude Code's own "Ran N commands" convention (screenshot
+   provided 2026-07-27). Rendered inline in transcriptLive's plain block
+   flow same as .tool-card used to be, so it needs its own margin-bottom
+   for between-group spacing (the removed #tool-calls flex gap used to
+   provide this). */
+.tool-group {
+  display: block;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--panel);
+  font-size: 0.85rem;
+  margin-bottom: 0.4rem;
+  overflow: hidden;
+}
+
+.tool-group:last-child {
+  margin-bottom: 0;
+}
+
+.tool-group > summary {
+  cursor: pointer;
+  padding: 0.45rem 0.7rem;
+  user-select: none;
+}
+
+.tool-group > summary::marker {
+  color: var(--muted);
+}
+
+.tool-group > summary:hover {
+  background: var(--panel-2);
+}
+
+/* Individual commands inside an open group - indented under the group's
+   own summary so it's visually clear they're nested, not siblings of it. */
+.tool-group-body {
+  padding: 0.3rem 0.7rem 0.7rem;
+  border-top: 1px solid var(--border-soft);
+}
+
+.tool-card {
+  display: block;
+  padding: 0.45rem 0.65rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  font-size: 0.85rem;
+  /* Between-card spacing inside one group's body; also doubles as the
+     between-card spacing for the (rare) case a card isn't inside a group
+     at all. */
+  margin-bottom: 0.35rem;
+}
+
+.tool-card:last-child {
+  margin-bottom: 0;
+}
+
+.tool-card > summary {
+  cursor: pointer;
+  user-select: none;
+}
+
+.tool-card > summary::marker {
+  color: var(--muted);
+}
+
+.tool-card-detail {
+  margin-top: 0.4rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed var(--border);
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+/* A solo card's own summary is hidden (see updateSoleCardExpand in
+   app.js) - its detail's top border/padding existed to separate it from
+   THAT summary, so with no summary above it, it'd otherwise be a
+   floating dashed line with nothing to separate from. Removed so a solo
+   card's content reads as a seamless continuation of the outer group's
+   own summary instead of a redundant nested card. */
+.tool-card-solo > .tool-card-detail {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+/* The actual command string ("$ ..."), shown above its output once a
+   card is expanded - its own distinct color (as opposed to
+   .tool-card-detail's muted gray or .tool-output's terminal teal below)
+   so command and result read as two different things at a glance, per
+   request 2026-07-27 ("shows the command (with color), and the result
+   (in gray, but we can also use a different color)"). */
+.tool-command {
+  color: var(--code);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  margin-bottom: 0.4rem;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+/* "(waiting for output…)" / "(no output)" placeholder - kept visually
+   distinct (italic) from real output so it never reads as an actual
+   empty-string result. */
+.tool-output-waiting {
+  font-style: italic;
+}
+
+.tool-card-field {
+  margin-bottom: 0.2rem;
+  word-break: break-word;
+}
+
+.tool-card-field-label {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.state-queued {
+  color: var(--muted);
+}
+
+.state-running {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.state-completed {
+  color: var(--ok);
+  border-color: var(--ok);
+}
+
+.state-failed,
+.state-error {
+  color: var(--fail);
+  border-color: var(--fail);
+}
+
+/* Pinned between #conversation and #composer, outside the scrolling
+   region - a run's whole duration (not just the initial POST) now keeps
+   the composer disabled (see setComposerEnabled/startRunStatus/
+   stopRunStatus in app.js), matching Claude Code's own persistent
+   "working" indicator instead of leaving the user with no feedback that
+   a run is still in flight.
+   :not([hidden]) is required, not decorative - confirmed live 2026-07-27
+   testing this exact element: a bare #run-status {display:flex} ID
+   selector outranks the browser's built-in [hidden] {display:none} UA
+   rule on specificity, so the bar was showing "Working · 0:00" on page
+   load despite the hidden attribute being correctly set. Same footgun
+   #app-view/#login-view already guard against elsewhere in this file. */
+#run-status:not([hidden]) {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 0.55rem 1.75rem 0.7rem;
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+#run-status-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+  box-shadow: 0 0 8px var(--accent);
+  animation: run-status-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes run-status-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+#run-status-label {
+  color: var(--text);
+  font-family: var(--font-mono);
+}
+
+#run-status-timer,
+#run-status-tokens,
+#run-status-context {
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+}
+
+/* Neutral (var(--muted), inherited) below 70% of the model's context
+   window, then warn/fail past 70%/90% - a cheap early signal to /reset
+   before hitting the context-overflow error a run can otherwise die on
+   (confirmed live 2026-07-27: the dashboard previously gave zero warning
+   before that happened). */
+.context-warn {
+  color: var(--warn);
+}
+
+/* Same pinned-between-conversation-and-composer treatment as #run-status
+   just above (matching its own :not([hidden]) footgun-guard comment,
+   even though setHidden() in app.js makes it structurally redundant now -
+   consistent with every other hidden-toggled rule in this file). Shown
+   whenever the session currently on screen matches an in-flight fix at
+   stage 4 or 5 - see updateSessionDecisionCard() in app.js. */
+#session-decision-card:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 0.8rem 1.75rem;
+  border-top: 1px solid var(--warn);
+  background: var(--warn-dim);
+  flex-shrink: 0;
+}
+
+#session-decision-description {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+#session-decision-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Shared by both surfaces buildDecisionButtons() renders into (the main
+   #session-decision-card above and each stage-tracker dropdown row) - one
+   set of button styles, not two that could drift apart. */
+.stage-decision-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.3rem;
+}
+
+.stage-decision-btn {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.3rem 0.8rem;
+  font-size: 0.78rem;
+  background: var(--panel);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.stage-decision-approve,
+.stage-decision-confirm-merged {
+  border-color: var(--ok);
+  color: var(--ok);
+}
+
+.stage-decision-approve:hover,
+.stage-decision-confirm-merged:hover {
+  background: var(--ok-dim);
+  border-color: var(--ok);
+}
+
+.stage-decision-deny {
+  border-color: var(--fail);
+  color: var(--fail);
+}
+
+.stage-decision-deny:hover {
+  background: var(--fail-dim);
+  border-color: var(--fail);
+}
+
+/* Close out and Approve suppression are neither the green "yes, ship it" nor
+   the red "no, throw it away" - they're bookkeeping and a scoped permission.
+   Neutral-but-deliberate keeps the two genuinely consequential colours
+   meaning what they already mean on this row. */
+.stage-decision-close-out,
+.stage-decision-approve-suppression {
+  border-color: var(--muted);
+  color: var(--muted);
+}
+
+.stage-decision-close-out:hover,
+.stage-decision-approve-suppression:hover {
+  border-color: var(--accent);
+  color: var(--text);
+  background: var(--panel-2);
+}
+
+/* Armed state for the confirm-on-second-click decisions (see
+   CONFIRMING_DECISIONS in app.js). Deny discards the worktree and branch;
+   Close out and Approve suppression both make the agent change something on
+   disk - all three have to read as more committing than their resting state,
+   not identical to it. */
+.stage-decision-deny.armed {
+  background: var(--fail);
+  color: var(--bg);
+  border-color: var(--fail);
+  font-weight: 700;
+}
+
+.stage-decision-close-out.armed,
+.stage-decision-approve-suppression.armed {
+  background: var(--warn);
+  color: var(--bg);
+  border-color: var(--warn);
+  font-weight: 700;
+}
+
+/* A denied fix stays listed until the agent finishes discarding it, but
+   reads as settled rather than as something still wanting attention. */
+.stage-fix-row.denied {
+  opacity: 0.55;
+}
+
+.stage-fix-row.denied .stage-step {
+  background: var(--muted);
+}
+
+.stage-pause-warning {
+  color: var(--warn);
+  font-weight: 600;
+}
+
+.stage-decision-btn:disabled {
+  opacity: 0.5;
+}
+
+.stage-decision-status,
+#session-decision-status {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.context-fail {
+  color: var(--fail);
+}
+
+/* A run-in-progress "you've scrolled away" affordance - own row between
+   the transcript and #run-status/#composer, same show/hide-via-[hidden]
+   convention already used for #run-status itself rather than an
+   absolutely-positioned overlay (simpler, and avoids needing to know
+   #run-status/#composer's combined height to avoid overlapping them).
+   Requested 2026-07-28 alongside the sticky-scroll fix - scrolling up to
+   read something previously gave no way back to the bottom except
+   scrolling manually.
+   :not([hidden]) is required, not decorative - same footgun #run-status/
+   #app-view already guard against elsewhere in this file, hit again live
+   2026-07-28 testing this exact new element: a bare #jump-latest-btn
+   {display:block} ID selector outranks the browser's built-in [hidden]
+   {display:none} UA rule on specificity, so the button showed up even on
+   a freshly-loaded, completely empty conversation despite the hidden
+   attribute being correctly set. */
+#jump-latest-btn:not([hidden]) {
+  display: block;
+  width: fit-content;
+  margin: 0 auto 0.5rem;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.8rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+  background: var(--panel);
+  box-shadow: var(--shadow-card);
+}
+
+/* The composer's own Run button doubles as the Stop control while a run
+   is active (see startRunStatus/stopRunStatus/abortActiveRun in app.js) -
+   matching Claude Code's send-button-becomes-stop-button convention -
+   rather than a separate always-visible button elsewhere. */
+#run-btn {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #06101a;
+  font-weight: 650;
+  padding: 0.45rem 1.3rem;
+}
+
+#run-btn:hover {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+}
+
+#run-btn.running {
+  color: var(--fail);
+  border-color: var(--fail);
+  background: var(--fail-dim);
+}
+
+#run-btn.running:hover {
+  background: var(--fail);
+  color: var(--bg);
+}
+
+/* Sits directly above #composer and shares its width/gutters so the two read
+   as one block: the composer says "you can't type here", this says "here is
+   what you CAN send". Deliberately quieter than #session-decision-card (no
+   warn-tinted background) - that card is a fix actively blocked on a
+   decision, this is a standing affordance on every watcher session. */
+#agent-reply-actions:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  width: 100%;
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 0.7rem 1.75rem 0;
+  flex-shrink: 0;
+}
+
+#agent-reply-note {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+/* flex-wrap so .agent-reply-last-decision (flex-basis: 100% below) can
+   push the actual decision button(s) onto their own row beneath it,
+   rather than squeezing both into one row - see app.js's
+   renderAgentReplyActions() for why this note exists and lives inside
+   this same container. */
+#agent-reply-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* "You already sent this" note for the unconditional approve-suppression
+   button - see app.js's renderAgentReplyActions() for the full
+   reasoning. Reuses --ok, same green .recents-item-decision (the sidebar
+   twin of this same marker) already uses, so the two read as the same
+   signal wherever either appears. flex-basis: 100% forces it onto its
+   own row within #agent-reply-buttons's flex-wrap row rather than
+   sitting inline beside the button. */
+.agent-reply-last-decision {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--ok);
+}
+
+#agent-reply-status {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+#composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.6rem;
+  width: 100%;
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 0.25rem 1.75rem 1.1rem;
+  flex-shrink: 0;
+}
+
+#message-input {
+  flex: 1;
+  resize: none;
+  max-height: 200px;
+  line-height: 1.5;
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+}
+
+#message-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim),
+    var(--shadow-card);
+}
+
+#run-error {
+  max-width: 820px;
+  margin: 0 auto 1rem;
+  padding: 0 1.75rem;
+}
+
+/* One-shot static replay of a past conversation (see app.js's
+   renderHistoryReplay/openHistoricalSession) - lives in #transcript-history,
+   a sibling of the live reveal-queue's #transcript-live, so a follow-up
+   sent after viewing history appends after the replay instead of the
+   queue's next render clobbering it. */
+.history-loading {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+/* .chat-turn: one user message or one assistant response, built by
+   app.js's shared appendChatTurn() - used identically by the live reveal
+   path (#transcript-live) and the static history replay
+   (#transcript-history), so a turn looks the same whether it's currently
+   streaming or being replayed. Previously named .history-turn, back when
+   only the static replay had per-turn structure at all and the live path
+   was one continuous undifferentiated stream with no user/assistant
+   distinction or even a rendering of the user's own message - renamed
+   2026-07-24 once the live path gained the same structure, matching
+   Claude Code's own turn-taking (confirmed as a real, explicitly
+   requested gap: "have the query in a different chat bubble and the
+   LLM's response in another"). */
+.chat-turn {
+  margin-bottom: 1.4em;
+  padding-bottom: 1.4em;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.chat-turn:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.chat-turn-role {
+  font-size: 0.68rem;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+  margin-bottom: 0.4em;
+}
+
+/* Asymmetric treatment matching Claude Code's own convention: the human's
+   own message reads as an actual bubble (background-tinted, right-
+   aligned, width-capped) while the agent's response stays plain, left-
+   aligned flowing text with no box around it - only one side of the
+   conversation is visually "contained". */
+.chat-turn-user {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.chat-turn-user .chat-turn-role {
+  color: var(--accent);
+}
+
+.chat-turn-user .chat-turn-body {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.7em 1em;
+  max-width: 85%;
+  box-shadow: var(--shadow-card);
+}
+
+/* Not scoped to .history-tool-card - the live #tool-calls path renders the
+   same .tool-output/.diff-output <pre> elements via the shared
+   renderToolOutput() helper, and needs the same sizing/wrapping. */
+.tool-card-detail pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+  max-height: 320px;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.82rem;
+}
+
+/* Actual command/tool output, as opposed to the field-label/metadata text
+   around it - given its own color rather than inheriting
+   .tool-card-detail's muted gray, so real stdout reads more like an
+   actual terminal. Requested 2026-07-24 ("bash content should have a
+   different color like Claude Code"). */
+.tool-output {
+  color: var(--terminal);
+}
+
+/* Unified-diff-shaped tool output (see app.js's isDiffLikeOutput/
+   renderDiffPre) - real per-line red/green coloring instead of plain
+   text, matching Claude Code's/GitHub's own diff view. Requested
+   2026-07-24. Each line is its own block-level span (see renderDiffPre);
+   .diff-output itself doesn't need white-space:pre-wrap for line breaks
+   (the spans already provide them) but still needs it for wrapping any
+   single overly-long line. */
+.diff-output {
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.diff-line {
+  display: block;
+  color: var(--text);
+}
+
+.diff-line-header {
+  color: var(--muted);
+}
+
+.diff-line-hunk {
+  color: var(--accent);
+}
+
+.diff-line-add {
+  color: var(--ok);
+  background: var(--ok-dim);
+}
+
+.diff-line-del {
+  color: var(--fail);
+  background: var(--fail-dim);
+}
+
+/* Account menu - the dashboard's settings entry point, replacing the old
+   #sidebar-settings block at the bottom of the Recents list. Lives as an
+   in-flow entry inside #sidebar-footer, styled to match the other sidebar
+   entries (+ New task, Ops) so the whole sidebar reads as one aligned
+   column. No login history/photo system exists here (this dashboard is
+   single-shared-password, no per-user accounts - see README's "everyone
+   who has this password shows up as 'the dashboard'" limitation), so the
+   label is a static app identity, not a real per-user name. */
+#account-menu {
+  /* In-flow entry inside #sidebar-footer - collapses with the sidebar. */
+  z-index: 40;
+}
+
+/* Layout and all of the resting/hover treatment now come from
+   .sidebar-nav-item (2026-08-06) - this used to redeclare the flex row and
+   carry the base `button` rule's panel background and border, which is the
+   bordered "bar" the sidebar's top two entries shed at the same time. Only
+   the avatar below is specific to this row. */
+
+/* Sizing and centering come from .sidebar-nav-symbol - only the circle's
+   own paint is left here. It used to be 1.6rem, a third wider than the
+   icon rows' symbols, which is what pushed this label 9.6px right of every
+   other one. The gradient disc and the letter are unchanged; the font
+   steps down with the box so the "D" still fits it. */
+#account-avatar {
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  color: #06101a;
+  font-weight: 700;
+  font-size: 0.66rem;
+}
+
+/* Opens upward, not downward - the button sits near the bottom edge of
+   the viewport, so a downward-opening menu would routinely clip off
+   screen. Same [hidden]-specificity footgun as #jump-latest-btn above
+   (see its own comment) - :not([hidden]) required so a bare ID/class
+   {display:block} can't outrank the UA [hidden]{display:none} rule. */
+#account-dropdown:not([hidden]) {
+  /* Fixed to the viewport (not absolute) - the sidebar's overflow-y:auto
+     would clip an absolutely-positioned child. Anchored to the viewport's
+     left edge, matching the sidebar's own left padding, and opens upward
+     from the footer's position. */
+  position: fixed;
+  left: 0.9rem;
+  bottom: 4.4rem;
+  display: flex;
+  flex-direction: column;
+  min-width: 10rem;
+  padding: 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+  box-shadow: var(--shadow-pop);
+}
+
+#account-dropdown button {
+  border: none;
+  background: none;
+  text-align: left;
+  padding: 0.5rem 0.6rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+}
+
+#account-dropdown button:hover {
+  background: var(--bg-elevated);
+  border-color: transparent;
+}
+
+/* Settings modal and the reusable confirm dialog share the same
+   backdrop/panel/centering convention - a fixed full-viewport backdrop
+   plus an absolutely-centered panel, simplest reliable cross-browser
+   centering approach for a small internal tool like this one (no need
+   for a dedicated dialog library). */
+#settings-modal,
+#confirm-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+}
+
+#settings-modal-backdrop,
+#confirm-dialog-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 4, 8, 0.72);
+  backdrop-filter: blur(3px);
+}
+
+#settings-modal-panel {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  width: min(640px, calc(100vw - 2rem));
+  height: min(var(--modal-height), calc(100vh - 2rem));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  box-shadow: var(--shadow-pop);
+  overflow: hidden;
+}
+
+#settings-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.2rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+#settings-modal-header h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 650;
+}
+
+#settings-modal-close {
+  border: none;
+  background: none;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0.25rem 0.5rem;
+  color: var(--muted);
+  border-radius: var(--radius-sm);
+}
+
+#settings-modal-close:hover {
+  border-color: transparent;
+  color: var(--fail);
+  background: var(--fail-dim);
+}
+
+#settings-modal-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+#settings-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  width: 11rem;
+  flex-shrink: 0;
+  padding: 0.75rem;
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  background: var(--bg-elevated);
+}
+
+.settings-nav-item {
+  border: none;
+  background: none;
+  text-align: left;
+  padding: 0.5rem 0.65rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.settings-nav-item:hover {
+  border-color: transparent;
+  color: var(--text);
+  background: var(--panel-2);
+}
+
+/* aria-current mirrors which category is showing (set in app.js) - used
+   here as the "active" style hook instead of a separate class so markup
+   and accessibility state can't drift apart. */
+.settings-nav-item[aria-current="true"] {
+  background: var(--accent-dim);
+  color: var(--text);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+}
+
+#settings-content {
+  flex: 1;
+  min-width: 0;
+  padding: 1.1rem 1.4rem;
+  overflow-y: auto;
+}
+
+.settings-category h3 {
+  margin: 0 0 1rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 0;
+  border-top: 1px solid var(--border);
+}
+
+.settings-row:first-of-type {
+  border-top: none;
+}
+
+.settings-row-text strong {
+  display: block;
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+}
+
+.settings-row-text p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+  max-width: 32rem;
+  line-height: 1.5;
+}
+
+.danger-btn {
+  color: var(--fail);
+  border-color: var(--fail);
+  flex-shrink: 0;
+  font-weight: 600;
+}
+
+.danger-btn:hover {
+  background: var(--fail);
+  border-color: var(--fail);
+  color: var(--bg);
+}
+
+#confirm-dialog-panel {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(420px, calc(100vw - 2rem));
+  padding: 1.4rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  box-shadow: var(--shadow-pop);
+}
+
+#confirm-dialog-title {
+  margin: 0 0 0.6rem;
+  font-size: 0.98rem;
+  font-weight: 650;
+}
+
+#confirm-dialog-message {
+  margin: 0 0 1.2rem;
+  font-size: 0.84rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+#confirm-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+/* Ops: sidebar entry, chrome banner/indicator, activity strip, modal.
+   Added 2026-08-03 - surfaces watcher/agent/approval state that previously
+   required SSHing into Server 6 to check by hand. */
+
+/* #ops-btn's own layout now comes from .sidebar-nav-item (2026-08-06) -
+   it used to carry width/text-align/flex here because it was a plain
+   bordered button. */
+
+.badge:not([hidden]) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: var(--fail);
+  color: #fff;
+  font-size: 0.66rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Shared banner shell. Was #agent-mismatch-banner-scoped until a second
+   banner needed it (2026-08-07, the model-health one); the ID was never
+   load-bearing - `:not([hidden])` is already specific enough on its own to
+   beat the browser's built-in `[hidden] { display: none }`, which is the
+   only reason that guard is there. */
+.ops-banner:not([hidden]) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.6rem 1.1rem;
+  background: var(--warn-dim);
+  border-bottom: 1px solid var(--warn);
+  color: var(--warn);
+  font-size: 0.82rem;
+  flex-shrink: 0;
+}
+
+.ops-banner button {
+  border: none;
+  background: none;
+  color: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0.1rem 0.4rem;
+}
+
+.ops-banner button:hover {
+  border-color: transparent;
+  background: none;
+  opacity: 0.7;
+}
+
+/* Red variant: a dead inference backend isn't a warning, nothing runs at
+   all until it's fixed. */
+.ops-banner.ops-banner-fail:not([hidden]) {
+  background: var(--fail-dim);
+  border-bottom-color: var(--fail);
+  color: var(--fail);
+}
+
+/* One in-flight escalation fix's row - built by buildStageFixRow() in
+   app.js and rendered inside the Ops modal's Fixes tab (see
+   .ops-fix-group). The sidebar stage widget that used to render these same
+   rows in a footer dropdown was removed 2026-08-06; the Fixes tab shows
+   every registered repo's fixes rather than just the selected one, so the
+   sidebar copy was a duplicate of a strictly smaller view. */
+.stage-fix-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--border);
+}
+
+/* Same :first-of-type-has-no-divider convention .activity-row already
+   uses, so a single in-flight fix (the common case) doesn't show a
+   pointless leading rule above it. */
+.stage-fix-row:first-of-type {
+  padding-top: 0;
+  border-top: none;
+}
+
+.stage-fix-row-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.stage-indicator-title {
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.stage-indicator-title strong {
+  color: var(--text);
+}
+
+.stage-steps {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.stage-step {
+  flex: 1;
+  height: 0.35rem;
+  border-radius: 999px;
+  background: var(--border);
+}
+
+.stage-step.done {
+  background: var(--ok);
+}
+
+.stage-step.current {
+  background: var(--accent);
+}
+
+.stage-open-conversation {
+  margin-top: 0.5rem;
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.stage-open-conversation:hover {
+  text-decoration: underline;
+  background: none;
+  border-color: transparent;
+}
+
+/* Activity strip - an in-flow entry inside #sidebar-footer, styled to
+   match the other sidebar entries. Its dropdown is fixed to the viewport
+   (see #activity-dropdown's own comment) so it renders above the sidebar
+   without being clipped. */
+#activity-menu {
+  /* In-flow entry inside #sidebar-footer - collapses with the sidebar. */
+  z-index: 40;
+}
+
+/* Same as #account-btn: layout and resting/hover treatment come from
+   .sidebar-nav-item now. `position: relative` stays - it's what the badge
+   below positions itself against, and it isn't part of the shared row. */
+#activity-btn {
+  position: relative;
+}
+
+#activity-icon {
+  display: inline-flex;
+  color: var(--accent);
+}
+
+#activity-badge {
+  position: absolute;
+  top: -0.2rem;
+  right: -0.2rem;
+}
+
+#activity-dropdown:not([hidden]) {
+  /* Fixed to the viewport (not absolute) - see #account-dropdown's own
+     comment for why. Anchored to the viewport's left edge, opening upward
+     from the footer's position. */
+  position: fixed;
+  left: 0.9rem;
+  bottom: 6.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 20rem;
+  max-height: 20rem;
+  overflow-y: auto;
+  padding: 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+  box-shadow: var(--shadow-pop);
+}
+
+#activity-dropdown h4 {
+  margin: 0 0 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.activity-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.45rem 0;
+  border-top: 1px solid var(--border);
+  font-size: 0.8rem;
+}
+
+.activity-row .pill {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.activity-row:first-of-type {
+  border-top: none;
+}
+
+.activity-row-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Ops modal - identical structure/behavior to the settings modal (see its
+   own comments above), deliberately kept as parallel, non-shared markup
+   and class names (.ops-nav-item / .ops-category vs. .settings-nav-item /
+   .settings-category) rather than reusing those selectors - app.js's
+   openSettingsCategory() queries .settings-nav-item/.settings-category
+   once at module load, so giving the Ops modal the same class names would
+   have it toggled (and its sections hidden/shown) by the Settings modal's
+   own open/close logic instead of its own. */
+#ops-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+}
+
+#ops-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 4, 8, 0.72);
+  backdrop-filter: blur(3px);
+}
+
+#ops-modal-panel {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  width: min(760px, calc(100vw - 2rem));
+  height: min(var(--modal-height), calc(100vh - 2rem));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  box-shadow: var(--shadow-pop);
+  overflow: hidden;
+}
+
+#ops-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.2rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+#ops-modal-header h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 650;
+}
+
+#ops-modal-close {
+  border: none;
+  background: none;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0.25rem 0.5rem;
+  color: var(--muted);
+  border-radius: var(--radius-sm);
+}
+
+#ops-modal-close:hover {
+  border-color: transparent;
+  color: var(--fail);
+  background: var(--fail-dim);
+}
+
+#ops-modal-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+#ops-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  width: 11rem;
+  flex-shrink: 0;
+  padding: 0.75rem;
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  background: var(--bg-elevated);
+}
+
+.ops-nav-item {
+  border: none;
+  background: none;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.65rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.ops-nav-item:hover {
+  border-color: transparent;
+  color: var(--text);
+  background: var(--panel-2);
+}
+
+.ops-nav-item[aria-current="true"] {
+  background: var(--accent-dim);
+  color: var(--text);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+}
+
+#ops-content {
+  flex: 1;
+  min-width: 0;
+  padding: 1.1rem 1.4rem;
+  overflow-y: auto;
+}
+
+.ops-category h3 {
+  margin: 0 0 1rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.ops-table {
+  display: flex;
+  flex-direction: column;
+}
+
+.ops-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--border);
+  font-size: 0.84rem;
+}
+
+.ops-row:first-of-type {
+  border-top: none;
+}
+
+.ops-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.ops-row-title {
+  color: var(--text);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ops-row-meta {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+}
+
+.ops-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+/* Watcher run-history page (#watcher-history-view), opened by the Watchers
+   tab's "View History" button. A third top-level view alongside
+   #login-view/#app-view - :not([hidden]) for the same specificity reason
+   documented on those two above. */
+#watcher-history-view:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+#watcher-history-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.9rem 1.2rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+#watcher-history-header h2 {
+  font-size: 1rem;
+  font-weight: 650;
+  color: var(--text);
+  font-family: var(--font-mono);
+}
+
+/* Full-width scroll track, centered content column - the same split
+   #conversation/#conversation-inner uses, and for the same reason: with
+   the max-width on the scroller itself, its scrollbar rendered at the
+   text column's edge (hard against the Runtime values) rather than at the
+   page's true right edge. min-height:0 for the flex reason called out on
+   #conversation, or this grows to fit its content and pushes the pager
+   off-screen instead of scrolling. */
+#watcher-history-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  width: 100%;
+  scrollbar-gutter: stable;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+/* Matches #conversation's own scrollbar treatment rather than leaving
+   this one at the platform default width. */
+#watcher-history-scroll::-webkit-scrollbar {
+  width: 10px;
+}
+
+#watcher-history-scroll::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+  border: 2px solid var(--bg);
+}
+
+#watcher-history-inner {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1rem 1.2rem;
+}
+
+/* Now a sibling of the scroller rather than a child, so it needs its own
+   copy of #watcher-history-inner's max-width/centering - otherwise its
+   top border would run the full page width while the rows above it stop
+   at the content column. */
+#watcher-history-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  max-width: 900px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0.9rem 1.2rem;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+#watcher-history-range {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--muted);
+  min-width: 9rem;
+  text-align: center;
+}
+
+#watcher-history-pager button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.ops-run {
+  display: grid;
+  /* Both leading tracks are fixed widths, not auto. Each .ops-run is its
+     own grid (and so is #watcher-history-head), so an auto track sizes to
+     that row's own content and drifts: the pills sawtoothed against each
+     other, and the "Status" header would not sit over the pill column it
+     names. 5.5rem clears the widest pill ("ERROR" measured 60px). The
+     duration takes the remaining 1fr and right-aligns, lining up on its
+     right edge instead. */
+  grid-template-columns: 7rem 5.5rem 1fr;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.2rem 0;
+}
+
+.ops-run-when {
+  font-family: var(--font-mono);
+}
+
+.ops-run-duration {
+  font-family: var(--font-mono);
+  text-align: right;
+}
+
+/* Column labels above the run list. Uses .ops-run's grid (see the markup
+   comment in index.html) plus its own chrome so it reads as a header
+   rather than another entry. */
+#watcher-history-head {
+  /* Sticky inside #watcher-history-scroll, so the labels stay put when a
+     page is tall enough to scroll on a short window. Needs an opaque
+     background of its own or the rows show through as they pass under. */
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.4rem;
+  margin-bottom: 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* "Runtime" sits in the right-aligned duration track, so its label has to
+   right-align too or it floats away from the numbers underneath it. */
+#watcher-history-head span:last-child {
+  text-align: right;
+}
+
+/* Status pill + its disclosure caret, sharing the status track. */
+.ops-run-status {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* Scoped to .ops-run rather than changing .pill globally - the same class
+   also styles the Ops watcher rows, the stage list and the task chips,
+   and this is only about how the run list reads. In a dense column of
+   statuses the outline was more visible than the word inside it; colour
+   and weight already carry the meaning. Horizontal padding goes with the
+   border so the text sits flush against the track edge, lining up under
+   the STATUS header. */
+.ops-run .pill {
+  border: none;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.ops-run-toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--muted);
+  /* Sized against the row text rather than the pill - at 0.7rem the caret
+     read as a speck next to the badge and was an awkward click target. */
+  font-size: 1rem;
+  line-height: 1;
+  transition: transform 0.12s ease;
+}
+
+.ops-run-toggle.open {
+  transform: rotate(180deg);
+}
+
+/* Collapsed failure detail. Spans all three tracks so its box lines up
+   flush with the row above it, left edge under TIME and right edge under
+   RUNTIME - it was previously indented 7rem to the status column, which
+   left it visibly narrower than every entry around it. The small top
+   margin keeps it tucked against the row it belongs to rather than
+   floating between neighbours. */
+.ops-run-detail {
+  grid-column: 1 / -1;
+  margin: 0.1rem 0 0.25rem;
+  font-size: 0.74rem;
+}
+
+.ops-run-detail dl {
+  display: grid;
+  grid-template-columns: 6rem 1fr;
+  gap: 0.15rem 0.6rem;
+  margin: 0.4rem 0 0;
+  padding: 0.5rem 0.7rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.ops-run-detail dt {
+  color: var(--muted);
+}
+
+.ops-run-detail dd {
+  margin: 0;
+  color: var(--text);
+  font-family: var(--font-mono);
+  overflow-wrap: anywhere;
+}
+
+
+.pill {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ops-empty {
+  padding: 1.25rem 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+/* Ops > Fixes tab. Rows are the SAME .stage-fix-row markup the sidebar
+   stage widget renders (see buildStageFixRow) - only the grouping around
+   them is new, so a fix looks identical wherever it's seen. .stage-fix-row
+   is already a flex column with its own top divider, so a group just needs
+   a labelled heading and the spacing between groups. */
+.ops-subhead {
+  margin: -0.6rem 0 1.1rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.ops-fix-group + .ops-fix-group {
+  margin-top: 1.5rem;
+}
+
+.ops-fix-group-header {
+  display: flex;
+  align-items: baseline;
+  /* A long display_name plus the repoKey plus the monitoring pill is more
+     than the content column holds at narrow widths - wrap rather than push
+     the panel into a horizontal scroll. */
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.45rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.ops-fix-group-header h4 {
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 650;
+  color: var(--text);
+}
+
+.ops-fix-group-key {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+}
+
+.ops-fix-group .stage-fix-row {
+  padding-top: 0.75rem;
+}
+
+/* The group heading already carries its own bottom rule, so the first row
+   under it must not add a second one immediately below.
+   This was previously written as `.ops-fix-group .stage-fix-row:first-of-type`,
+   which silently never matched: :first-of-type resolves against the element
+   TYPE, and the group's first div is .ops-fix-group-header, not a row - so the
+   first row kept its base border-top and every group rendered a double line.
+   The adjacent-sibling selector says what was actually meant. It must stay
+   BELOW the rule above: both are (0,2,0) specificity, so source order is what
+   makes this one win on padding-top. */
+.ops-fix-group-header + .stage-fix-row {
+  padding-top: 0;
+  border-top: none;
+}
+
+/* Roomier than the 20rem sidebar dropdown these rows were originally
+   designed in (since removed) - the modal has the width, and the incident
+   line is the part that was wrapping hardest. */
+.ops-fix-group .stage-indicator-title {
+  font-size: 0.82rem;
+}
+
+/* Subtle scrollbars for scrollable panels/dropdowns */
+#sidebar::-webkit-scrollbar,
+#settings-content::-webkit-scrollbar,
+#ops-content::-webkit-scrollbar,
+#settings-nav::-webkit-scrollbar,
+#ops-nav::-webkit-scrollbar,
+#activity-dropdown::-webkit-scrollbar {
+  width: 8px;
+}
+
+#sidebar::-webkit-scrollbar-thumb,
+#settings-content::-webkit-scrollbar-thumb,
+#ops-content::-webkit-scrollbar-thumb,
+#settings-nav::-webkit-scrollbar-thumb,
+#ops-nav::-webkit-scrollbar-thumb,
+#activity-dropdown::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+/* --- Compaction note ---------------------------------------------------
+   A context compaction arrives in chat.history as role:"system" with the
+   literal text "Compaction". It is framework plumbing, not a turn, so it is
+   styled as a quiet inline rule rather than a chat bubble - deliberately not
+   competing with real messages, but explicit enough that nobody has to guess
+   what it means (which is exactly what happened when it rendered as an Agent
+   bubble saying one cryptic word). */
+.compaction-note {
+  margin: 0.9rem 0;
+  border-top: 1px solid var(--border-soft);
+  padding-top: 0.6rem;
+}
+
+.compaction-note-toggle {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  width: 100%;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.compaction-note-toggle:hover .compaction-note-label { color: var(--text); }
+
+.compaction-note-caret {
+  flex: none;
+  width: 0;
+  height: 0;
+  border-left: 4px solid currentColor;
+  border-top: 3px solid transparent;
+  border-bottom: 3px solid transparent;
+  transform: translateY(-1px);
+  transition: transform 0.12s ease;
+}
+
+.compaction-note.open .compaction-note-caret { transform: rotate(90deg) translateX(-1px); }
+
+.compaction-note-label {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.compaction-note-hint { color: var(--muted); }
+
+.compaction-note-body {
+  margin-top: 0.55rem;
+  padding-left: 0.9rem;
+  border-left: 2px solid var(--border);
+}
+
+.compaction-note-meta {
+  color: var(--muted);
+  font-size: 0.72rem;
+  margin-bottom: 0.4rem;
+}
+
+/* The summary is the agent's own structured markdown - preserved verbatim
+   rather than re-rendered, since what matters is exactly what it carried
+   forward, not a prettied-up version of it. */
+.compaction-note-summary {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  line-height: 1.5;
+  color: var(--text);
+  max-height: 22rem;
+  overflow-y: auto;
+}
+
+/* --- Fix-row activity chips --------------------------------------------
+   The stage bar shows the furthest stage reached, never whether anything is
+   still driving it. These say how long a fix has been sitting, and flag the
+   two ways it stops matching what the bar implies. */
+.stage-activity {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  flex: none;
+}
+
+.stage-activity-age {
+  color: var(--muted);
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.stage-activity-chip {
+  font-size: 0.68rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* Definite (the run really did die) reads as an error; circumstantial
+   (just old) reads as a warning. Same severity split the run-history rows
+   already use, so the two surfaces stay legible together. */
+.stage-activity-chip.aborted {
+  color: var(--fail);
+  background: var(--fail-dim);
+}
+
+.stage-activity-chip.stalled {
+  color: var(--warn);
+  background: var(--warn-dim);
+}
+
+/* Sent-but-not-yet-acted-on decision. Occupies the space the buttons were in,
+   so the card visibly changes state on click rather than looking untouched -
+   which is what made people click Approve two or three times. */
+.stage-decision-pending {
+  font-size: 0.78rem;
+  color: var(--ok);
+  background: var(--ok-dim);
+  border-radius: 6px;
+  padding: 0.35rem 0.6rem;
+  display: inline-block;
+}
+
+/* Re-check: read-only, so styled as neither approve nor deny. Muted on
+   purpose - it must not compete with the decision it sits beside, and a
+   neutral third button next to a green/red pair is the whole point. */
+.stage-decision-verify {
+  border-color: var(--border);
+  color: var(--muted);
+}
+
+.stage-decision-verify:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--muted);
+}
+
+/* A run that ended without the agent replying. Styled as a failure notice
+   rather than a chat bubble: no model turn happened, so attributing it to the
+   agent (which is what the plain fallback text did) is misleading. */
+.run-failed-note {
+  margin: 0.9rem 0;
+  padding: 0.6rem 0.75rem;
+  border-left: 2px solid var(--fail);
+  background: var(--fail-dim);
+  border-radius: 0 6px 6px 0;
+}
+
+.run-failed-title {
+  color: var(--fail);
+  font-size: 0.8rem;
+  font-weight: 650;
+  margin-bottom: 0.25rem;
+}
+
+.run-failed-body {
+  color: var(--text);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.run-failed-when {
+  color: var(--muted);
+  font-size: 0.72rem;
+  margin-top: 0.35rem;
+}
+
+/* --- Agent capabilities & boundaries ----------------------------------
+   Reference material, not a status readout: read once to understand what an
+   agent can do, not watched. Styled quieter than the roster above it, with
+   only a genuine deviation allowed to draw the eye. */
+.ops-capabilities {
+  margin-top: 1.4rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.ops-capabilities-title {
+  margin: 0 0 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 650;
+  color: var(--text);
+}
+
+.ops-cap-row {
+  display: flex;
+  gap: 0.9rem;
+  padding: 0.45rem 0;
+  border-top: 1px solid var(--border-soft);
+  font-size: 0.76rem;
+  line-height: 1.55;
+}
+
+.ops-cap-row:first-of-type { border-top: none; }
+
+.ops-cap-key {
+  flex: 0 0 9.5rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.ops-cap-value { flex: 1; color: var(--text); min-width: 0; }
+
+.ops-cap-details { margin-top: 0.35rem; }
+
+.ops-cap-details > summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-size: 0.72rem;
+}
+
+.ops-cap-toolgroup {
+  margin-top: 0.35rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--muted);
+  word-break: break-word;
+}
+
+/* The one case worth shouting about: agents that should be interchangeable
+   resolving to different tool sets. */
+.ops-cap-deviation {
+  color: var(--fail);
+  background: var(--fail-dim);
+  border-radius: 4px;
+  padding: 0.35rem 0.5rem;
+}
+
+/* --- Token volume panel ------------------------------------------------
+   A CSS bar chart rather than a charting library: the dashboard ships no
+   third-party JS and this is a ten-row horizontal bar, which grid does
+   natively. Rows are date | bar | value so the bars share one baseline and
+   stay comparable, which is the whole purpose of the view. */
+.ops-usage-row {
+  display: grid;
+  grid-template-columns: 3.2rem 1fr 3.6rem;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.2rem 0;
+  font-size: 0.82rem;
+}
+
+.ops-usage-date {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.ops-usage-track {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  height: 1.1rem;
+  background: var(--border-soft);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.ops-usage-bar {
+  height: 100%;
+  /* Input bars can compute to a sub-pixel width on a quiet day next to a busy
+     one. Floor them so a real, measured value never renders as literally
+     nothing - an invisible bar reads as "no data", which is a different state
+     with its own styling below. */
+  min-width: 1px;
+}
+
+.ops-usage-bar-in { background: var(--accent-strong); }
+
+/* Output is routinely ~0.5% of the bar (input carries the re-sent bootstrap
+   docs), so it is usually a sliver. Brighter than the input segment so that
+   sliver is still findable. */
+.ops-usage-bar-out { background: var(--warn); }
+
+/* The two not-measured states, deliberately distinguished. "Ran but usage was
+   never recorded" is a measurement gap worth noticing; "no activity" is
+   ordinary quiet. Rendering both as an empty track would conflate them. */
+.ops-usage-nodata {
+  padding-left: 0.4rem;
+  font-size: 0.72rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ops-usage-nodata-unmeasured {
+  color: var(--warn);
+  background: var(--warn-dim);
+  width: 100%;
+}
+
+.ops-usage-nodata-idle { color: var(--muted); }
+
+.ops-usage-value {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+}
+
+.ops-usage-agent-row {
+  display: flex;
+  justify-content: space-between;
+  /* Wrap rather than shrink. The detail below is nowrap and so refuses to give
+     up width; without this the name is squeezed to near-zero and, because it
+     also sets overflow-wrap, breaks to ONE CHARACTER PER LINE - a 20-line
+     vertical stack of letters per agent at 375px. Wrapping drops the detail to
+     its own line instead, which is what there is actually room for. */
+  flex-wrap: wrap;
+  gap: 0.15rem 0.8rem;
+  padding: 0.35rem 0;
+  border-top: 1px solid var(--border-soft);
+  font-size: 0.82rem;
+}
+
+.ops-usage-agent-name {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* Only a last-resort guard for an absurdly long agent id. With the row
+     wrapping above, the name gets a full line and never reaches this. */
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.ops-usage-agent-detail {
+  color: var(--muted);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.ops-usage-agent-unmeasured { color: var(--warn); }
+
+#ops-usage-agents { margin-top: 1rem; }
+
+/* Monitoring: live K8s log panes (#monitoring-view). Phase 4 of
+   docs/monitoring-live-logs.md. A top-level view alongside
+   #login-view/#app-view/#watcher-history-view - :not([hidden]) for the same
+   specificity reason documented on those. */
+#monitoring-view:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+#monitoring-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.9rem 1.2rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  /* The picker and the limits label are the two things that can grow; on a
+     narrow window they drop to a second line rather than crushing the title. */
+  flex-wrap: wrap;
+}
+
+#monitoring-header h2 {
+  font-size: 1rem;
+  font-weight: 650;
+  color: var(--text);
+  font-family: var(--font-mono);
+  margin: 0;
+}
+
+#monitoring-target-select {
+  min-width: 14rem;
+  font-size: 0.84rem;
+  padding: 0.35rem 0.5rem;
+}
+
+/* Pushed to the far edge: it explains the periodic reattach divider and the
+   stream cap, which are things you look up once and then stop reading. */
+#monitoring-limits {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+#monitoring-status {
+  padding: 1.25rem 1.2rem 0;
+}
+
+/* One column in phase 4; phase 5 turns this into the 1-4 pane grid of §6.2.
+   minmax(0, 1fr) on BOTH axes already, not later: a grid track's default
+   `auto` minimum is its content's size, so a single unbroken 4KB log line
+   would force the track wider than the viewport and put a horizontal
+   scrollbar on the whole page. That is the narrow-width defect already fixed
+   twice in this dashboard, and it is cheaper to never introduce here. */
+#monitoring-grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 0.75rem;
+  padding: 0.75rem 1.2rem 1rem;
+}
+
+.log-pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+  overflow: hidden;
+}
+
+.log-pane-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border-soft);
+  background: var(--panel-2);
+  flex-shrink: 0;
+}
+
+.log-pane-name {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: var(--text);
+}
+
+.log-pane-meta {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  color: var(--muted);
+  /* The namespace and selector are the first thing to check when a pane finds
+     zero pods, so they are truncated rather than dropped or wrapped. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.log-pane-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--muted);
+}
+
+.log-pane-dot[data-state="connecting"] { background: var(--muted); }
+.log-pane-dot[data-state="live"] { background: var(--ok); }
+.log-pane-dot[data-state="retrying"] { background: var(--warn); }
+.log-pane-dot[data-state="failed"] { background: var(--fail); }
+
+.log-pane-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0.4rem 0;
+  scrollbar-gutter: stable;
+}
+
+/* Matches #conversation's own scrollbar treatment rather than the platform
+   default width. */
+.log-pane-body::-webkit-scrollbar {
+  width: 10px;
+}
+
+.log-pane-body::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+  border: 2px solid var(--panel);
+}
+
+/* Two FIXED columns and one flexible text column.
+   The text track is minmax(0, 1fr) for the same reason the grid above is:
+   `auto` would let one long line set the width for every row.
+
+   The first two tracks are fixed rather than `auto`, which is the version this
+   shipped with for about an hour. Every row is its OWN grid (there is no
+   shared grid container), so an `auto` track sizes to that row's content
+   alone and collapses to zero when the cell is empty - which meant the text
+   column started at a different x on every row, and a line the runtime wrote
+   without a timestamp shunted its own text a full column to the left.
+   Measured live at 176px / 88px / 147px on three consecutive rows.
+   ch units are exact here because the column is monospace: 12ch is precisely
+   "18:27:55.069" and 6ch fits a standard pod suffix, with the full pod name
+   on the cell's title for the rare longer one. */
+.log-row {
+  display: grid;
+  grid-template-columns: 12ch 6ch minmax(0, 1fr);
+  gap: 0 0.6rem;
+  padding: 0.05rem 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: var(--text);
+}
+
+.log-row:hover {
+  background: var(--bg-elevated);
+}
+
+.log-row-time {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.log-row-pod {
+  color: var(--code);
+  white-space: nowrap;
+  /* Clipped rather than allowed to push the text column out of alignment -
+     the full pod/container pair is on the cell's title. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* pre-wrap, not nowrap-with-scroll: a wrapped line is still fully readable,
+   whereas a per-row horizontal scrollbar means the end of every long line is
+   somewhere the operator has to go and find it. `anywhere` because log lines
+   carry long unbroken tokens (UUIDs, paths, base64) with no break
+   opportunity of their own. */
+.log-row-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+/* Reattach / throttle / failure notes, rendered inline in the log flow rather
+   than in the header: they are events that happened at a point in the stream,
+   and their whole value is knowing WHERE in the output they happened. Styled
+   as a divider for now; phase 6 is where these get their real treatment. */
+/* Reattach / throttle / failure notes, rendered inline in the log flow rather
+   than in the header: they are events that happened at a point in the stream,
+   and their whole value is knowing WHERE in the output they happened. A header
+   badge would report that a reattach occurred while throwing away the only
+   part that matters.
+
+   Phase 6 makes that literal - a centred label with a rule running out to both
+   edges, which is the one shape that reads as "the stream did something here"
+   rather than as another log line that happens to be coloured. The rules are
+   pseudo-elements inheriting currentColor, so each tone colours label and rule
+   together from one declaration. */
+.log-note {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.2rem 0.75rem;
+  margin: 0.35rem 0;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+}
+
+.log-note::before,
+.log-note::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.35;
+}
+
+.log-note-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  padding: 0.1rem 0.6rem;
+  /* The label is the one part that must stay readable at any pane width, so
+     the rules give up their space first. */
+  flex-shrink: 0;
+  max-width: 85%;
+}
+
+.log-note-muted { color: var(--muted); }
+.log-note-warn { color: var(--warn); }
+.log-note-fail { color: var(--fail); }
+
+.log-note-warn .log-note-label { background: var(--warn-dim); }
+/* A dead stream is the one note that should stop the eye rather than sit in
+   the flow, so it is the only one with a filled label. */
+.log-note-fail .log-note-label { background: var(--fail-dim); font-weight: 600; }
+
+/* §5.1's manual retry, attached to the failure itself rather than the header:
+   a dead pane should say why AND offer the one thing to do about it, in the
+   same place. */
+.log-note-retry {
+  background: transparent;
+  border: 1px solid currentColor;
+  color: inherit;
+  border-radius: 999px;
+  padding: 0 0.45rem;
+  font-size: 0.68rem;
+  font-family: var(--font-ui);
+  cursor: pointer;
+}
+
+.log-note-retry:hover:not(:disabled) {
+  background: var(--fail);
+  color: var(--bg);
+}
+
+.log-note-retry:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* §6.4 severity tinting, from each repo's own operator-authored
+   `error_pattern`. Display only: the row is tinted and nothing else changes -
+   no line is filtered, hidden, reordered, or counted differently for
+   matching. A left rule rather than a background wash, so a burst of matching
+   lines is scannable as a block instead of turning a third of the pane into a
+   solid colour. */
+.log-row-alert {
+  box-shadow: inset 2px 0 0 var(--fail);
+  background: var(--fail-dim);
+}
+
+.log-row-alert .log-row-text {
+  color: #fca5a5;
+}
+
+/* Pane grid shapes (§6.2), phase 5. One class per pane count rather than
+   inline styles, because the 3-pane case is not expressible as a column count:
+   the third pane spans the bottom row, which needs a rule of its own. The
+   count class is written by syncMonitoringLayout(), the single place pane
+   count turns into layout. */
+#monitoring-grid.panes-1 {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+}
+
+#monitoring-grid.panes-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: minmax(0, 1fr);
+}
+
+#monitoring-grid.panes-3,
+#monitoring-grid.panes-4 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+}
+
+/* Third of three spans the bottom row. Half-width with dead space beside it
+   would be the same pane the 4-pane layout gives, with none of the room the
+   spare column could have provided. */
+#monitoring-grid.panes-3 .log-pane:nth-child(3) {
+  grid-column: 1 / -1;
+}
+
+/* Below this the side-by-side layouts stop being readable - two log panes at
+   ~380px each wrap almost every line. Stack them instead and let the grid
+   scroll, with a floor tall enough that a pane still shows useful context
+   rather than three lines. */
+@media (max-width: 860px) {
+  #monitoring-grid,
+  #monitoring-grid.panes-2,
+  #monitoring-grid.panes-3,
+  #monitoring-grid.panes-4 {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-auto-rows: minmax(240px, 1fr);
+    overflow-y: auto;
+  }
+
+  #monitoring-grid.panes-3 .log-pane:nth-child(3) {
+    grid-column: auto;
+  }
+}
+
+/* position: relative so the jump button and the paused badge can be pinned
+   inside THIS pane rather than the page - with four panes, "jump to latest"
+   has to be unambiguous about which one it means. */
+.log-pane {
+  position: relative;
+}
+
+.log-pane-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  /* Pushed to the pane's own right edge, so the controls sit in the same
+     place in every pane regardless of how long the workload's name is. */
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.log-pane-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: var(--radius-sm);
+  padding: 0.1rem 0.4rem;
+  font-size: 0.7rem;
+  font-family: var(--font-ui);
+  cursor: pointer;
+  line-height: 1.5;
+}
+
+.log-pane-btn:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.log-pane-close {
+  font-size: 0.85rem;
+  padding: 0 0.35rem;
+}
+
+.log-pane-close:hover {
+  color: var(--fail);
+  border-color: var(--fail);
+}
+
+/* Pinned inside the pane, above the log body. Same affordance as
+   #jump-latest-btn on the conversation, scoped to one pane. */
+.log-pane-jump:not([hidden]) {
+  position: absolute;
+  right: 0.9rem;
+  bottom: 0.7rem;
+  z-index: 2;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.72rem;
+  cursor: pointer;
+  box-shadow: var(--shadow-card);
+}
+
+.log-pane-jump:hover {
+  border-color: var(--accent);
+}
+
+/* The buffered-line count while paused. Bottom-left so it never collides with
+   the jump button, and always visible rather than tucked in the header: a
+   paused pane looks exactly like a dead one otherwise, which is the single
+   most misleading thing this view could do. */
+.log-pane-paused:not([hidden]) {
+  position: absolute;
+  left: 0.9rem;
+  bottom: 0.7rem;
+  z-index: 2;
+  background: var(--warn-dim);
+  border: 1px solid var(--warn);
+  color: var(--warn);
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.72rem;
+  font-family: var(--font-mono);
+}
+
+/* A second, always-in-view signal for the same thing - the badge above sits
+   at the bottom of a pane the operator may have scrolled away from. */
+.log-pane.paused .log-pane-header {
+  border-bottom-color: var(--warn);
+}

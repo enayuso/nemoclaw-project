@@ -1,0 +1,26 @@
+# kubeconfig template for ops-nemoclaw's read-only view of Server 2's k3s
+# cluster. Rendered by bootstrap.sh (via render-template.py) from .env's
+# K8S_SA_TOKEN/K3S_CA_B64 - never commit the rendered output, only this
+# template. The `server` address is always the local end of the
+# tunnel-keeper.sh-maintained SSH tunnel (127.0.0.1:16443), never Server 2's
+# real address directly - the sandbox has no other path to the k3s API
+# server (see policies/server2-k8s-tunnel.yaml: only the `ssh` binary is
+# allowed to reach Server 2 at all).
+apiVersion: v1
+kind: Config
+clusters:
+  - name: server2
+    cluster:
+      server: https://127.0.0.1:16443
+      certificate-authority-data: {{K3S_CA_B64}}
+users:
+  - name: ops-nemoclaw-monitor
+    user:
+      token: {{K8S_SA_TOKEN}}
+contexts:
+  - name: server2-dev
+    context:
+      cluster: server2
+      user: ops-nemoclaw-monitor
+      namespace: dev
+current-context: server2-dev
