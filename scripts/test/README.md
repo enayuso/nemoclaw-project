@@ -6,8 +6,8 @@ suppression that filtered nothing, a gate that failed open, a queue that would
 happily retry an undeliverable incident forever. None of those show up as an
 error; they show up as a repo nobody is watching.
 
-**They need bash 5** (`local -n` namerefs). macOS ships bash 3.2, so run them on
-Server 6 or inside the sandbox, not on the Mac.
+**They need bash 5** (`local -n` namerefs). macOS ships bash 3.2 — install bash 5 with
+`brew install bash` and run them with `/opt/homebrew/bin/bash`.
 
 | file | what it covers | where to run |
 | --- | --- | --- |

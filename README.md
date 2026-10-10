@@ -49,6 +49,19 @@ GitHub PR로 준비하며, 그 PR도 사람이 승인해야 반영된다.
 - **운영 도구** — 재빌드 전 안전 점검(`check-rebuild-safe.sh`), 설정 드리프트 탐지, 자격증명 교체, 샌드박스 전체
   재구축용 복구 런북.
 
+## 왜 Docker가 아니라 Kubernetes인가
+
+처음에는 SSH로 일반 Docker 컨테이너를 감시했고, 이후 k3s 클러스터로 옮겼다. 이 작업에는 Kubernetes가 더
+잘 맞았다.
+
+- **실제 권한 경계.** Kubernetes RBAC로 에이전트에게 파드·로그를 `get/list/watch`만 할 수 있는 ServiceAccount를
+  줄 수 있다(시크릿 접근·쓰기 불가). Docker에는 이런 장치가 없다 — Docker 소켓 접근은 사실상 root 권한이라, Docker
+  버전에서는 강제 명령(forced-command) SSH 래퍼를 직접 만들어야 했다.
+- **모든 서비스에 같은 API.** watcher가 라벨(`app=svc-core`)로 워크로드를 찾고 `kubectl logs`로 로그를 읽는다.
+  호스트별 SSH·컨테이너 이름을 따로 다룰 필요가 없다.
+- **학습.** 그동안 주로 Docker만 다뤄 왔기 때문에, 실제로 돌아가는 시스템 위에서 Kubernetes 개념(namespace,
+  deployment, label, RBAC, ServiceAccount, kubeconfig)을 익히려는 의도도 있었다.
+
 ## 디렉터리 구조
 
 | 경로 | 내용 |
@@ -62,20 +75,24 @@ GitHub PR로 준비하며, 그 PR도 사람이 승인해야 반영된다.
 | `k8s/`, `kube/`, `policies/`, `ssh/` | 읽기 전용 RBAC 매니페스트, kubeconfig 템플릿, NemoClaw 네트워크 정책 프리셋, SSH 클라이언트 설정 |
 | `skills/` | 설치형 OpenClaw 스킬(예: `second-opinion-review`) |
 | `workspace/` | 샌드박스 메인 에이전트의 정체성/사용자 프로필 |
-| `docs/` | [`operations.md`](docs/operations.md)(전체 설치 절차·주의사항), [`recovery.md`](docs/recovery.md), [`k8s-migration-architecture.md`](docs/k8s-migration-architecture.md), [`monitoring-live-logs.md`](docs/monitoring-live-logs.md) |
+| `docs/` | [`macos-setup.md`](docs/macos-setup.md)(Mac 한 대로 구성하기), [`operations.md`](docs/operations.md)(서버 기준 전체 설치 절차·주의사항), [`recovery.md`](docs/recovery.md), [`k8s-migration-architecture.md`](docs/k8s-migration-architecture.md), [`monitoring-live-logs.md`](docs/monitoring-live-logs.md) |
 | `attic/` | 이전 Docker/SSH 감시 방식의 폐기된 코드(참고용) |
 
 ## 시작하기
 
-### 준비물
+### 준비물 (macOS, Apple Silicon)
 
-- Docker와 [NemoClaw](https://www.nvidia.com/)가 설치된 Linux 호스트(arm64 또는 x86_64)
+- [Homebrew](https://brew.sh): `brew install colima docker kubectl gh jq bash node`
+  (Colima 대신 Docker Desktop도 가능)
+- Mac에 설치한 [NemoClaw](https://www.nvidia.com/)
+- 감시할 k3s 클러스터 — Mac에서는 Colima VM으로: `colima start --profile k3s --kubernetes --network-address`
 - OpenAI 호환 추론 엔드포인트(나는 Qwen 모델을 서빙하는 자체 호스팅 vLLM을 사용)
-- 감시할 Kubernetes(k3s) 클러스터와, 읽기 전용 RBAC를 한 번 적용할 cluster-admin 권한
 - 감시 대상 저장소용 GitHub 계정/PAT
-- 대시보드용 Node.js 18 이상, 셸 테스트용 `bash` 5 + `jq`
 
-### 설치 요약 (자세한 내용은 [`docs/operations.md`](docs/operations.md#setup))
+Mac 한 대로 구성하는 단계별 가이드는 [`docs/macos-setup.md`](docs/macos-setup.md)에 있다. 문서에 나오는
+"Server 6"은 NemoClaw 호스트(내 Mac), "Server 2"는 k3s 클러스터(Colima VM)를 뜻한다.
+
+### 설치 요약
 
 ```bash
 # 1. 시크릿 (.env는 절대 커밋하지 않는다)
@@ -122,8 +139,9 @@ npm test                 # node --test test/*.test.js
 ```bash
 cd dashboard && npm test                                         # 대시보드 단위/통합 테스트
 python3 scripts/check-agent-doc-rules.py                          # 렌더링된 에이전트 문서에 안전 규칙이 모두 남아 있는지
-bash scripts/test/watcher-queue.test.sh scripts/lib/watcher-common.sh   # bash 5 필요
-bash scripts/test/ask-decision.test.sh  scripts/lib/ask-decision.sh
+# macOS 기본 bash는 3.2 — 셸 테스트에는 Homebrew의 bash 5가 필요하다
+/opt/homebrew/bin/bash scripts/test/watcher-queue.test.sh scripts/lib/watcher-common.sh
+/opt/homebrew/bin/bash scripts/test/ask-decision.test.sh  scripts/lib/ask-decision.sh
 ```
 
 ## 참고

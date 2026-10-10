@@ -52,6 +52,19 @@ pair-programming sessions with **Claude Code**.
 - **Operational tooling** — rebuild-safety preflight (`check-rebuild-safe.sh`), config-drift detection,
   credential rotation, and a recovery runbook for full sandbox rebuilds.
 
+## Why Kubernetes (and not just Docker)
+
+The project started out monitoring plain Docker containers over SSH, and later moved to a k3s cluster.
+Kubernetes fit this job better for three reasons:
+
+- **A real permission boundary.** Kubernetes RBAC lets the agent hold a ServiceAccount that can only
+  `get/list/watch` pods and logs — no secrets, no writes. Docker has no equivalent: access to the Docker socket
+  is effectively root, so the Docker version needed a hand-written forced-command SSH wrapper instead.
+- **One uniform API for every service.** Watchers find workloads by label (`app=svc-core`) and read logs with
+  `kubectl logs`, the same way for every registered repo, instead of per-host SSH and container names.
+- **Learning.** I had mostly worked with Docker before; building this was a deliberate way to learn
+  Kubernetes concepts (namespaces, deployments, labels, RBAC, ServiceAccounts, kubeconfig) on a real system.
+
 ## Repository layout
 
 | Path | Contents |
@@ -65,20 +78,24 @@ pair-programming sessions with **Claude Code**.
 | `k8s/`, `kube/`, `policies/`, `ssh/` | Read-only RBAC manifest, kubeconfig template, NemoClaw network policy presets, SSH client config |
 | `skills/` | Installable OpenClaw skills (e.g. `second-opinion-review`) |
 | `workspace/` | Identity/user profile for the sandbox's main agent |
-| `docs/` | [`operations.md`](docs/operations.md) (full setup + known gotchas), [`recovery.md`](docs/recovery.md), [`k8s-migration-architecture.md`](docs/k8s-migration-architecture.md), [`monitoring-live-logs.md`](docs/monitoring-live-logs.md) |
+| `docs/` | [`macos-setup.md`](docs/macos-setup.md) (single-Mac setup), [`operations.md`](docs/operations.md) (full server setup + known gotchas), [`recovery.md`](docs/recovery.md), [`k8s-migration-architecture.md`](docs/k8s-migration-architecture.md), [`monitoring-live-logs.md`](docs/monitoring-live-logs.md) |
 | `attic/` | Retired code from the earlier Docker/SSH monitoring path, kept for reference |
 
 ## Getting started
 
-### Prerequisites
+### Prerequisites (macOS, Apple Silicon)
 
-- A Linux host with Docker and [NemoClaw](https://www.nvidia.com/) installed (arm64 or x86_64)
+- [Homebrew](https://brew.sh): `brew install colima docker kubectl gh jq bash node`
+  (or Docker Desktop instead of Colima)
+- [NemoClaw](https://www.nvidia.com/) installed on the Mac
+- A k3s cluster to monitor — on a Mac, a Colima VM: `colima start --profile k3s --kubernetes --network-address`
 - An OpenAI-compatible inference endpoint (I used a self-hosted vLLM serving a Qwen model)
-- A Kubernetes (k3s) cluster to monitor, and cluster-admin once to apply the read-only RBAC
 - A GitHub account/PAT for the repos being monitored
-- Node.js ≥ 18 for the dashboard; `bash` 5 + `jq` for the shell test harnesses
 
-### Setup (summary — full details in [`docs/operations.md`](docs/operations.md#setup))
+The step-by-step single-Mac guide is [`docs/macos-setup.md`](docs/macos-setup.md). The docs refer to
+"Server 6" (the NemoClaw host — your Mac) and "Server 2" (the k3s cluster — the Colima VM).
+
+### Setup (summary)
 
 ```bash
 # 1. secrets (never commit .env)
@@ -125,8 +142,9 @@ npm test                 # node --test test/*.test.js
 ```bash
 cd dashboard && npm test                                         # dashboard unit/integration tests
 python3 scripts/check-agent-doc-rules.py                          # rendered agent docs still contain every safety rule
-bash scripts/test/watcher-queue.test.sh scripts/lib/watcher-common.sh   # needs bash 5
-bash scripts/test/ask-decision.test.sh  scripts/lib/ask-decision.sh
+# macOS ships bash 3.2 — the shell harnesses need Homebrew's bash 5
+/opt/homebrew/bin/bash scripts/test/watcher-queue.test.sh scripts/lib/watcher-common.sh
+/opt/homebrew/bin/bash scripts/test/ask-decision.test.sh  scripts/lib/ask-decision.sh
 ```
 
 ## Notes

@@ -1,5 +1,9 @@
 # Operations reference
 
+> Written for the original two-server deployment (Linux hosts). For a single Mac, start with
+> [macos-setup.md](macos-setup.md) — the steps below still apply with "Server 6" = your Mac and
+> "Server 2" = the Colima k3s VM.
+
 Detailed operational notes for `ops-nemoclaw`, the NemoClaw
 instance direct-installed on Server 6 (`ops-s006@203.0.113.10:19031`), plus
 the registry-driven system for onboarding new monitored repos generally.

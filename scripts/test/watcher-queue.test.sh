@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # watcher-queue.test.sh <path-to-watcher-common.sh>
 # Unit checks for the deferred-delivery queue and the stranded-entry detector.
-# Needs bash 5 (namerefs) - run it on Server 6 or in the sandbox, not on macOS.
+# Needs bash 5 (namerefs) - on macOS use Homebrew bash: /opt/homebrew/bin/bash
 set -uo pipefail
 LIB="$1"
 TMP=$(mktemp -d)
